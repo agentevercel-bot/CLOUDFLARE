@@ -1,0 +1,1437 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portal Académico - Asistencia & Noticias</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f5fa',
+              100: '#e1ecf5',
+              500: '#1f4e79',
+              600: '#183e61',
+              700: '#12304d',
+              800: '#0c2136',
+              900: '#061320',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- FontAwesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <!-- SheetJS (Excel read/write fallback) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <!-- jsQR (Camera QR scan) -->
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+
+  <!-- QRCode.js (On-demand QR generation) -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+
+  <style>
+    @keyframes scanMove {
+      0% { top: 10%; opacity: 0.9; }
+      50% { top: 85%; opacity: 1; }
+      100% { top: 10%; opacity: 0.9; }
+    }
+    .scan-laser {
+      position: absolute;
+      left: 10%;
+      right: 10%;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, #22c55e, #4ade80, transparent);
+      box-shadow: 0 0 12px #22c55e;
+      border-radius: 2px;
+      animation: scanMove 2.2s ease-in-out infinite;
+    }
+    @media print {
+      body * { visibility: hidden; }
+      #qr-print-container, #qr-print-container * { visibility: visible; }
+      #qr-print-container { position: absolute; left: 0; top: 0; width: 100%; display: grid !important; grid-template-columns: repeat(2, 1fr) !important; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col font-sans antialiased">
+
+  <!-- NAVBAR PRINCIPAL -->
+  <header class="bg-brand-700 text-white shadow-lg sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-xl shadow-inner">
+          <i class="fa-solid fa-graduation-cap text-sky-300"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold tracking-tight flex items-center gap-2">
+            Portal Académico
+            <span id="badge-backend-status" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              <i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Conectando...
+            </span>
+          </h1>
+          <p class="text-xs text-sky-200" id="current-clock">Cargando fecha y hora...</p>
+        </div>
+      </div>
+
+      <!-- Selector de Carpeta / Archivo -->
+      <div class="flex items-center gap-2 flex-wrap">
+        <button id="btn-conectar-carpeta" class="px-3.5 py-1.5 rounded-lg bg-sky-500 hover:bg-sky-400 text-white text-xs font-semibold flex items-center gap-2 transition shadow hover:shadow-md">
+          <i class="fa-solid fa-folder-open"></i>
+          <span id="folder-btn-text">📁 Carpeta archivos_excel/</span>
+        </button>
+
+        <label class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-medium cursor-pointer transition flex items-center gap-1.5 border border-white/20">
+          <i class="fa-solid fa-file-excel"></i> Subir Excel
+          <input type="file" id="file-input-manual" accept=".xlsx, .xls" class="hidden" />
+        </label>
+
+        <button id="btn-descargar-actual" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition flex items-center gap-1.5 shadow" title="Descargar copia del Excel activo">
+          <i class="fa-solid fa-download"></i> Descargar Excel
+        </button>
+      </div>
+    </div>
+
+    <!-- SUB-BARRA: HORARIO GENERAL (Especificación requerida) -->
+    <div class="bg-brand-800 border-t border-brand-600/40 text-xs px-4 py-2">
+      <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-1.5 text-sky-300 font-semibold uppercase tracking-wider">
+          <i class="fa-regular fa-clock"></i> Horario de Materias:
+        </div>
+        <div class="flex flex-wrap items-center gap-2 text-slate-300">
+          <span class="px-2.5 py-1 rounded-md bg-white/5 border border-white/10 flex items-center gap-1.5 transition" id="badge-opt">
+            <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+            <strong>9:00 - 11:00:</strong> Optimización
+          </span>
+          <span class="px-2.5 py-1 rounded-md bg-white/5 border border-white/10 flex items-center gap-1.5 transition" id="badge-io">
+            <span class="w-2 h-2 rounded-full bg-sky-400"></span>
+            <strong>11:00 - 1:00:</strong> Investigación de Operaciones
+          </span>
+          <span class="px-2.5 py-1 rounded-md bg-white/5 border border-white/10 flex items-center gap-1.5 transition" id="badge-td">
+            <span class="w-2 h-2 rounded-full bg-indigo-400"></span>
+            <strong>1:00 - 3:00:</strong> Teoría de la Decisión
+          </span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENEDOR PRINCIPAL -->
+  <main class="max-w-7xl mx-auto w-full px-4 py-6 flex-1 flex flex-col gap-6">
+
+    <!-- SELECTORES PRINCIPALES: MODO Y MATERIA -->
+    <section class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- 1. SELECTOR DE MODO -->
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+            1. Selecciona el Modo
+          </label>
+          <div class="grid grid-cols-2 gap-3">
+            <button type="button" data-mode="asistencia" class="mode-btn active-mode flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl border-2 font-bold text-sm bg-brand-500 text-white border-brand-500 shadow-sm transition-all duration-150">
+              <i class="fa-solid fa-clipboard-user text-lg"></i>
+              <span>Asistencia</span>
+            </button>
+            <button type="button" data-mode="noticia" class="mode-btn inactive-mode flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl border-2 font-bold text-sm bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 transition-all duration-150">
+              <i class="fa-solid fa-newspaper text-lg"></i>
+              <span>Noticia</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. SELECTOR DE MATERIA -->
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+            2. Selecciona la Materia
+          </label>
+          <div class="grid grid-cols-3 gap-2">
+            <button type="button" data-subj="optimizacion" class="subj-btn active-subj flex flex-col items-center justify-center p-2.5 rounded-xl border-2 text-center bg-brand-50 border-brand-500 text-brand-700 shadow-sm transition-all duration-150">
+              <span class="text-xs font-bold">Optimización</span>
+              <span class="text-[10px] text-slate-500 mt-0.5">9:00 - 11:00</span>
+            </button>
+            <button type="button" data-subj="investigacion_operaciones" class="subj-btn inactive-subj flex flex-col items-center justify-center p-2.5 rounded-xl border-2 text-center bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 transition-all duration-150">
+              <span class="text-xs font-bold">Inv. Operaciones</span>
+              <span class="text-[10px] text-slate-500 mt-0.5">11:00 - 1:00</span>
+            </button>
+            <button type="button" data-subj="teoria_decision" class="subj-btn inactive-subj flex flex-col items-center justify-center p-2.5 rounded-xl border-2 text-center bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 transition-all duration-150">
+              <span class="text-xs font-bold">Teoría Decisión</span>
+              <span class="text-[10px] text-slate-500 mt-0.5">1:00 - 3:00</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ESTADO DEL ARCHIVO VINCULADO & SELECTOR DE FECHAS DE MARTES/JUEVES -->
+      <div class="mt-4 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div class="flex items-center gap-2 text-slate-600">
+          <i class="fa-regular fa-file-excel text-emerald-600 text-sm"></i>
+          <span>Archivo activo: <strong id="current-filename" class="text-brand-700">IIAT31-OPTIMIZACION-A1.xlsx</strong></span>
+          <span id="save-status-badge" class="ml-2 px-2 py-0.5 rounded-full text-[11px] bg-emerald-100 text-emerald-700 font-bold">Python Conectado</span>
+        </div>
+
+        <div class="text-slate-600 flex items-center gap-2">
+          <i class="fa-regular fa-calendar-days text-brand-500"></i>
+          <span class="font-semibold">Fecha de Clase (Martes y Jueves):</span>
+          <select id="select-class-date" class="px-2.5 py-1 rounded-md border border-slate-300 text-xs font-bold text-brand-700 bg-white focus:outline-none focus:border-brand-500">
+            <!-- Rellenado dinámicamente con todos los martes y jueves desde 04/08/2026 -->
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VISTA: MODO ASISTENCIA ==================== -->
+    <div id="view-asistencia" class="flex flex-col gap-6">
+
+      <!-- PANEL DIVIDIDO: CÁMARA ESCÁNER Y ESTADÍSTICAS -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- CÁMARA ESCÁNER (5 cols) -->
+        <div class="lg:col-span-5 bg-white rounded-2xl p-5 shadow-sm border border-slate-200 flex flex-col">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-bold text-slate-700 flex items-center gap-2">
+              <i class="fa-solid fa-camera text-brand-500"></i> Escáner QR en Vivo
+            </h2>
+            <div class="flex items-center gap-1.5">
+              <button id="btn-toggle-cam" class="px-3 py-1 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold transition">
+                <i class="fa-solid fa-video mr-1"></i> Abrir Cámara
+              </button>
+            </div>
+          </div>
+
+          <!-- Visor de cámara -->
+          <div class="relative bg-slate-900 rounded-xl overflow-hidden aspect-[4/3] flex items-center justify-center border border-slate-300">
+            <video id="camera-feed" class="w-full h-full object-cover hidden" playsinline muted></video>
+            <canvas id="camera-canvas" class="hidden"></canvas>
+            
+            <!-- Superposición de escaneo -->
+            <div id="scan-frame" class="absolute inset-0 flex items-center justify-center pointer-events-none hidden">
+              <div class="relative w-56 h-56 border-2 border-emerald-400/80 rounded-2xl shadow-[0_0_0_9999px_rgba(0,0,0,0.45)]">
+                <div class="scan-laser"></div>
+                <!-- Esquinas estéticas -->
+                <div class="absolute -top-1 -left-1 w-5 h-5 border-t-4 border-l-4 border-emerald-400 rounded-tl-lg"></div>
+                <div class="absolute -top-1 -right-1 w-5 h-5 border-t-4 border-r-4 border-emerald-400 rounded-tr-lg"></div>
+                <div class="absolute -bottom-1 -left-1 w-5 h-5 border-b-4 border-l-4 border-emerald-400 rounded-bl-lg"></div>
+                <div class="absolute -bottom-1 -right-1 w-5 h-5 border-b-4 border-r-4 border-emerald-400 rounded-br-lg"></div>
+              </div>
+            </div>
+
+            <!-- Placeholder cuando cámara está apagada -->
+            <div id="camera-placeholder" class="text-center p-6 text-slate-400">
+              <i class="fa-solid fa-camera-rotate text-4xl mb-2 text-slate-500"></i>
+              <p class="text-xs">Cámara apagada.<br>Haz clic en "Abrir Cámara" para escanear.</p>
+            </div>
+          </div>
+
+          <!-- Mensajes de feedback del escáner -->
+          <div id="scan-feedback" class="mt-3 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-center text-slate-600 flex items-center justify-center gap-2">
+            <i class="fa-solid fa-qrcode text-slate-400"></i>
+            <span>Apunta la cámara al QR del alumno para registrar automáticamente (1).</span>
+          </div>
+        </div>
+
+        <!-- PANEL DE ESTADÍSTICAS Y ACCIONES (7 cols) -->
+        <div class="lg:col-span-7 flex flex-col gap-4">
+          
+          <!-- TARJETAS DE MÉTRICAS -->
+          <!-- TARJETAS DE MÉTRICAS -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 text-center">
+              <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total</div>
+              <div class="text-3xl font-extrabold text-slate-800 mt-1" id="stat-total">0</div>
+              <div class="text-[11px] text-slate-500 mt-0.5">Alumnos en lista</div>
+            </div>
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-emerald-200 text-center bg-emerald-50/40">
+              <div class="text-xs font-semibold text-emerald-700 uppercase tracking-wider" id="stat-label-presentes">Presentes (1)</div>
+              <div class="text-3xl font-extrabold text-emerald-600 mt-1" id="stat-presentes">0</div>
+              <div class="text-[11px] text-emerald-700 mt-0.5" id="stat-sublabel-presentes">Registrados hoy</div>
+            </div>
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-rose-200 text-center bg-rose-50/40">
+              <div class="text-xs font-semibold text-rose-700 uppercase tracking-wider" id="stat-label-ausentes">Ausentes (0)</div>
+              <div class="text-3xl font-extrabold text-rose-600 mt-1" id="stat-ausentes">0</div>
+              <div class="text-[11px] text-rose-700 mt-0.5" id="stat-sublabel-ausentes">Faltas</div>
+            </div>
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-amber-200 text-center bg-amber-50/40">
+              <div class="text-xs font-semibold text-amber-700 uppercase tracking-wider">Pendientes</div>
+              <div class="text-3xl font-extrabold text-amber-600 mt-1" id="stat-pendientes">0</div>
+              <div class="text-[11px] text-amber-700 mt-0.5">Sin calificar / marcar</div>
+            </div>
+          </div>
+
+          <!-- BOTONES DE ACCIÓN PRINCIPALES -->
+          <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2 flex-wrap">
+              <button id="btn-finalizar-clase" class="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs tracking-wide transition shadow hover:shadow-md flex items-center gap-2">
+                <i class="fa-solid fa-flag-checkered"></i>
+                <span id="btn-finalizar-texto">Finalizar Clase (Rellenar Ausencias con 0)</span>
+              </button>
+              <button id="btn-marcar-todos-presentes" class="px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition border border-slate-300 flex items-center gap-1.5">
+                <i class="fa-solid fa-check-double text-emerald-600"></i>
+                <span id="btn-todos-texto">Todos Presentes</span>
+              </button>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <button id="btn-ver-qrs" class="px-3.5 py-2.5 rounded-xl bg-brand-50 hover:bg-brand-100 text-brand-700 font-semibold text-xs transition border border-brand-200 flex items-center gap-1.5">
+                <i class="fa-solid fa-qrcode text-brand-500"></i> Ver / Imprimir QRs
+              </button>
+            </div>
+          </div>
+
+          <!-- BARRA DE BÚSQUEDA Y FILTROS -->
+          <div class="bg-white rounded-2xl p-3 shadow-sm border border-slate-200 flex items-center justify-between gap-3">
+            <div class="relative flex-1">
+              <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+              <input type="text" id="search-student" placeholder="Buscar alumno por nombre o número de cuenta..." class="w-full pl-8 pr-3 py-1.5 rounded-lg text-xs bg-slate-50 border border-slate-200 focus:outline-none focus:border-brand-500" />
+            </div>
+            <div class="flex items-center gap-1 text-xs">
+              <span class="text-slate-400">Filtrar:</span>
+              <button data-filter="all" class="filter-btn px-2.5 py-1 rounded-md bg-slate-200 font-bold text-slate-800 text-[11px]">Todos</button>
+              <button data-filter="pending" class="filter-btn px-2.5 py-1 rounded-md hover:bg-slate-100 text-slate-600 text-[11px]">Pendientes</button>
+              <button data-filter="present" class="filter-btn px-2.5 py-1 rounded-md hover:bg-slate-100 text-slate-600 text-[11px]" id="filter-btn-present">Presentes</button>
+              <button data-filter="absent" class="filter-btn px-2.5 py-1 rounded-md hover:bg-slate-100 text-slate-600 text-[11px]" id="filter-btn-absent">No Entregó</button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- LISTA TABULAR DE ALUMNOS (HOJA 2 / NOTICIA) -->
+      <section class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <h3 class="font-bold text-sm text-slate-800 flex items-center gap-2">
+              <i class="fa-solid fa-table-list text-brand-500"></i>
+              Lista de Alumnos (<span id="table-sheet-title" class="text-brand-600">Hoja 2 Asistencia</span>) - <span id="label-materia-activa" class="text-brand-600 font-extrabold">Optimización</span>
+            </h3>
+            <p class="text-xs text-slate-400" id="table-sheet-subtitle">Haz clic en 1 o 0 para modificar manualmente, o escanea el QR con la cámara.</p>
+          </div>
+          <span class="text-xs text-slate-500">Columna activa: <strong id="label-fecha-col" class="text-brand-700">08/09/2026</strong></span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200">
+                <th class="py-3 px-4 w-12 text-center">#</th>
+                <th class="py-3 px-4 w-28">Cuenta</th>
+                <th class="py-3 px-4">Nombre del Alumno</th>
+                <th class="py-3 px-4 w-40 text-center" id="th-estado-col">Estado en Fecha</th>
+                <th class="py-3 px-4 w-44 text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="student-table-body" class="divide-y divide-slate-100">
+              <tr>
+                <td colspan="5" class="py-8 text-center text-slate-400">
+                  <i class="fa-solid fa-spinner fa-spin text-xl mb-2 text-slate-300"></i>
+                  <p>Cargando lista de alumnos...</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ==================== VISTA: MODO NOTICIA / AVISOS ==================== -->
+    <div id="view-noticia" class="hidden flex flex-col gap-6">
+
+      <!-- ENCABEZADO DE NOTICIAS Y BOTÓN CREAR -->
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-bullhorn text-amber-500"></i>
+            Tablón de Noticias y Avisos - <span id="label-materia-noticia" class="text-brand-600 font-bold">Optimización</span>
+          </h2>
+          <p class="text-xs text-slate-500 mt-0.5">
+            Publica avisos, tareas, fechas de exámenes o recordatorios que se guardan en la hoja <strong>Noticias</strong> del archivo Excel.
+          </p>
+        </div>
+        <button id="btn-abrir-modal-noticia" class="px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold transition flex items-center gap-2 shadow">
+          <i class="fa-solid fa-plus"></i> Publicar Nueva Noticia
+        </button>
+      </div>
+
+      <!-- LISTA DE NOTICIAS PUBLICADAS -->
+      <div id="noticias-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Tarjetas dinámicas de noticias -->
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="bg-white border-t border-slate-200 mt-auto py-4 text-xs text-slate-500 text-center">
+    <div class="max-w-7xl mx-auto px-4 flex flex-wrap items-center justify-between gap-2">
+      <div>Servidor Python Flask + Portal Web de Asistencia</div>
+      <div>Hoja 2 Asistencia (Martes y Jueves desde 04/08/2026) · Hoja Horario</div>
+    </div>
+  </footer>
+
+  <!-- ==================== MODAL: NUEVA NOTICIA ==================== -->
+  <div id="modal-noticia" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 relative">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+          <i class="fa-solid fa-pen-to-square text-brand-500"></i> Publicar Noticia / Aviso
+        </h3>
+        <button id="btn-cerrar-modal-noticia" class="text-slate-400 hover:text-slate-600 text-lg">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="form-nueva-noticia" class="mt-4 flex flex-col gap-4 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Título del Aviso:</label>
+          <input type="text" id="noticia-titulo" required placeholder="Ej: Entrega de Práctica 1 / Examen Parcial" class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:border-brand-500 text-xs" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Prioridad / Tipo:</label>
+            <select id="noticia-prioridad" class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:border-brand-500 text-xs bg-white">
+              <option value="Informativo">📘 Informativo</option>
+              <option value="Tarea">📝 Tarea / Práctica</option>
+              <option value="Examen">⚠️ Examen</option>
+              <option value="Urgente">🚨 Urgente</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Fecha:</label>
+            <input type="text" id="noticia-fecha" class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:border-brand-500 text-xs" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Descripción / Mensaje para los alumnos:</label>
+          <textarea id="noticia-cuerpo" rows="4" required placeholder="Escribe el contenido detallado del comunicado..." class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:border-brand-500 text-xs"></textarea>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+          <button type="button" id="btn-cancelar-noticia" class="px-4 py-2 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 font-semibold transition">Cancelar</button>
+          <button type="submit" class="px-4 py-2 rounded-lg bg-brand-500 hover:bg-brand-600 text-white font-bold transition flex items-center gap-1.5">
+            <i class="fa-solid fa-floppy-disk"></i> Guardar en Excel
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: VISUALIZADOR DE CÓDIGOS QR ==================== -->
+  <div id="modal-qrs" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-100">
+      <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50 rounded-t-2xl no-print">
+        <div>
+          <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+            <i class="fa-solid fa-qrcode text-brand-500"></i> Códigos QR de Alumnos
+          </h3>
+          <p class="text-xs text-slate-500">Imprime o muestra estos códigos para que los alumnos puedan ser escaneados con la cámara.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="window.print()" class="px-3.5 py-1.5 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold flex items-center gap-1.5 shadow">
+            <i class="fa-solid fa-print"></i> Imprimir Credenciales
+          </button>
+          <button id="btn-cerrar-modal-qrs" class="text-slate-400 hover:text-slate-600 text-xl px-2">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="p-6 overflow-y-auto flex-1">
+        <div id="qr-print-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <!-- Tarjetas QR generadas -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== JAVASCRIPT DE LA APLICACIÓN ==================== -->
+  <script>
+    /* -------------------------------------------------------------
+       1. ESTADO GLOBAL
+       ------------------------------------------------------------- */
+    const APP_STATE = {
+      mode: 'asistencia',
+      subject: 'optimizacion',
+      serverConnected: false,            // True si Flask backend responde
+
+      directoryHandle: null,             // Fallback File System Access API
+      workbook: null,                    // Fallback SheetJS
+      currentFileName: '',
+
+      students: [],
+      noticias: [],
+      todayDateStr: '08/09/2026',
+      classDates: [],
+
+      // Cámara
+      cameraActive: false,
+      videoStream: null,
+      lastScannedData: null,
+      lastScanTimestamp: 0,
+      scanCooldownMs: 2500,
+    };
+
+    const SUBJECT_CONFIG = {
+      optimizacion: {
+        name: 'Optimización',
+        schedule: '9:00 - 11:00',
+        fileName: 'IIAT31-OPTIMIZACION-A1.xlsx'
+      },
+      investigacion_operaciones: {
+        name: 'Investigación de Operaciones',
+        schedule: '11:00 - 1:00',
+        fileName: 'IIAT33-INVESTIGACION DE OPERACIONES-A3.xlsx'
+      },
+      teoria_decision: {
+        name: 'Teoría de la Decisión',
+        schedule: '1:00 - 3:00',
+        fileName: 'IIAT32-TEORIA DE LA DECISION-A2.xlsx'
+      }
+    };
+
+    /* -------------------------------------------------------------
+       2. GENERACIÓN DE MARTES Y JUEVES DESDE 04/08/2026
+       ------------------------------------------------------------- */
+    function generarFechasMartesJueves() {
+      const dates = [];
+      const start = new Date(2026, 7, 4); // 4 de Agosto 2026 (mes 7 = Agosto)
+      const end = new Date(2026, 11, 18); // 18 de Diciembre 2026
+
+      let curr = new Date(start);
+      while (curr <= end) {
+        const day = curr.getDay(); // 2 = Martes, 4 = Jueves
+        if (day === 2 || day === 4) {
+          const dd = String(curr.getDate()).padStart(2, '0');
+          const mm = String(curr.getMonth() + 1).padStart(2, '0');
+          const yyyy = curr.getFullYear();
+          dates.push(`${dd}/${mm}/${yyyy}`);
+        }
+        curr.setDate(curr.getDate() + 1);
+      }
+      return dates;
+    }
+
+    /* -------------------------------------------------------------
+       3. INICIALIZACIÓN
+       ------------------------------------------------------------- */
+    document.addEventListener('DOMContentLoaded', async () => {
+      initClock();
+      setupClassDateDropdown();
+      setupEventListeners();
+      highlightActiveSchedule();
+
+      // Verificar si el servidor Python Flask está respondiendo
+      await checkServerConnection();
+    });
+
+    function initClock() {
+      const clockEl = document.getElementById('current-clock');
+      function update() {
+        const now = new Date();
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+        clockEl.textContent = now.toLocaleDateString('es-MX', options);
+      }
+      update();
+      setInterval(update, 1000);
+    }
+
+    function setupClassDateDropdown() {
+      APP_STATE.classDates = generarFechasMartesJueves();
+      const select = document.getElementById('select-class-date');
+      select.innerHTML = '';
+
+      // Determinar la fecha más cercana a hoy si coincide con un martes o jueves
+      const now = new Date();
+      const dd = String(now.getDate()).padStart(2, '0');
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const yyyy = now.getFullYear();
+      const realToday = `${dd}/${mm}/${yyyy}`;
+
+      let selectedDate = APP_STATE.classDates.includes(realToday) ? realToday : '08/09/2026';
+      APP_STATE.todayDateStr = selectedDate;
+
+      APP_STATE.classDates.forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d;
+        opt.textContent = `${d} (${obtenerDiaSemanaStr(d)})`;
+        if (d === selectedDate) opt.selected = true;
+        select.appendChild(opt);
+      });
+
+      document.getElementById('label-fecha-col').textContent = selectedDate;
+      document.getElementById('noticia-fecha').value = selectedDate;
+
+      select.addEventListener('change', async (e) => {
+        APP_STATE.todayDateStr = e.target.value;
+        document.getElementById('label-fecha-col').textContent = APP_STATE.todayDateStr;
+        document.getElementById('noticia-fecha').value = APP_STATE.todayDateStr;
+        await cargarDatosMateria();
+      });
+    }
+
+    function obtenerDiaSemanaStr(fechaStr) {
+      const [dd, mm, yyyy] = fechaStr.split('/');
+      const d = new Date(yyyy, mm - 1, dd);
+      return d.getDay() === 2 ? 'Martes' : 'Jueves';
+    }
+
+    function highlightActiveSchedule() {
+      const hour = new Date().getHours();
+      const bOpt = document.getElementById('badge-opt');
+      const bIO = document.getElementById('badge-io');
+      const bTD = document.getElementById('badge-td');
+
+      [bOpt, bIO, bTD].forEach(b => b.classList.remove('bg-emerald-500/20', 'border-emerald-400', 'text-emerald-300'));
+
+      if (hour >= 9 && hour < 11) bOpt.classList.add('bg-emerald-500/20', 'border-emerald-400', 'text-emerald-300');
+      else if (hour >= 11 && hour < 13) bIO.classList.add('bg-emerald-500/20', 'border-emerald-400', 'text-emerald-300');
+      else if (hour >= 13 && hour < 15) bTD.classList.add('bg-emerald-500/20', 'border-emerald-400', 'text-emerald-300');
+    }
+
+    /* -------------------------------------------------------------
+       4. CONEXIÓN AL BACKEND PYTHON FLASK
+       ------------------------------------------------------------- */
+    async function checkServerConnection() {
+      const badge = document.getElementById('badge-backend-status');
+      try {
+        const resp = await fetch('/api/materias');
+        if (resp.ok) {
+          const data = await resp.json();
+          APP_STATE.serverConnected = true;
+          badge.className = 'text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+          badge.innerHTML = '<i class="fa-solid fa-server text-emerald-400 mr-1"></i> Servidor Python Activo';
+
+          document.getElementById('save-status-badge').textContent = 'Guardado Automático en Disco';
+          document.getElementById('save-status-badge').className = 'ml-2 px-2 py-0.5 rounded-full text-[11px] bg-emerald-100 text-emerald-700 font-bold';
+
+          await cargarDatosMateria();
+          return;
+        }
+      } catch (err) {
+        console.warn('Backend Python no detectado o en modo estático.', err);
+      }
+
+      // Si no responde, modo Netlify / local
+      APP_STATE.serverConnected = false;
+      badge.className = 'text-xs font-semibold px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30';
+      badge.innerHTML = '<i class="fa-solid fa-cloud text-sky-400 mr-1"></i> Modo Netlify / Local';
+      document.getElementById('save-status-badge').textContent = 'Modo Navegador';
+      await loadFallbackData();
+    }
+
+    async function cargarDatosMateria() {
+      const conf = SUBJECT_CONFIG[APP_STATE.subject];
+      document.getElementById('current-filename').textContent = conf.fileName;
+      const hojaLabel = APP_STATE.mode === 'noticia' ? 'Noticia' : 'Hoja 2 (Asistencia)';
+      document.getElementById('label-materia-activa').textContent = `${conf.name} [${hojaLabel}]`;
+
+      if (APP_STATE.serverConnected) {
+        try {
+          const resp = await fetch(`/api/datos?materia=${APP_STATE.subject}&modo=${APP_STATE.mode}&fecha=${encodeURIComponent(APP_STATE.todayDateStr)}`);
+          const data = await resp.json();
+          if (data.ok) {
+            APP_STATE.students = data.students;
+            renderStudentTable();
+            actualizarEstadisticas(data.total_alumnos, data.presentes, data.ausentes, data.pendientes);
+            return;
+          }
+        } catch (e) {
+          console.error('Error al cargar datos desde Python:', e);
+        }
+      }
+
+      // Fallback
+      await loadFallbackData();
+    }
+
+    async function loadFallbackData() {
+      // Intentar cargar archivo estático si existe
+      try {
+        const conf = SUBJECT_CONFIG[APP_STATE.subject];
+        const resp = await fetch(`archivos_excel/${conf.fileName}`);
+        if (resp.ok) {
+          const blob = await resp.blob();
+          const buffer = await blob.arrayBuffer();
+          const wb = XLSX.read(buffer, { type: 'array' });
+          APP_STATE.workbook = wb;
+          parseHoja2Fallback();
+          renderStudentTable();
+          renderNoticiasCards();
+          return;
+        }
+      } catch (_) {}
+
+      // Generar datos en memoria
+      generateInMemoryFallback();
+    }
+
+    function generateInMemoryFallback() {
+      const ROSTERS = {
+        optimizacion: [
+          { cuenta: '2011505', nombre: 'DE LA CRUZ LOPEZ ALAN', status: 'pending' },
+          { cuenta: '2521564', nombre: 'ESQUIVEL ROSALES ANGEL MICHELLE', status: 'pending' },
+          { cuenta: '2521566', nombre: 'GONZALEZ DE LA CRUZ EDGAR', status: 'pending' },
+          { cuenta: '2113059', nombre: 'GUADARRAMA GARCIA ARIANA CRYSTAL', status: 'pending' },
+          { cuenta: '2421346', nombre: 'GUTIERREZ BECERRIL CARLOS LEONARDO', status: 'pending' },
+          { cuenta: '2521567', nombre: 'HERNANDEZ REYES RODRIGO SANTOS', status: 'pending' },
+          { cuenta: '2110647', nombre: 'MACEDO MIRANDA VANESSA MICHELLE', status: 'pending' },
+          { cuenta: '1210584', nombre: 'MEDINA JARAMILLO PAULINA', status: 'pending' },
+          { cuenta: '2520064', nombre: 'OLGUIN ALBARRAN ANDREA', status: 'pending' },
+          { cuenta: '2472431', nombre: 'PASTRANA SARANDINGUA DANIELA FERNANDA', status: 'pending' },
+          { cuenta: '2322588', nombre: 'REBOLLAR RUIZ LUIS FERNANDO', status: 'pending' },
+          { cuenta: '2521584', nombre: 'RENTERIA MORENO MARCO ANTONIO', status: 'pending' },
+          { cuenta: '2112372', nombre: 'ROMERO SANCHEZ ASHELY JULYETTE', status: 'pending' },
+          { cuenta: '2321033', nombre: 'SANCHEZ HERRERA URIEL', status: 'pending' },
+          { cuenta: '2215068', nombre: 'SEVERO SANCHEZ LEONARDO VALENTINO', status: 'pending' },
+          { cuenta: '2460889', nombre: 'SILVA ALBARRAN MICHELLE', status: 'pending' },
+          { cuenta: '2011201', nombre: 'VILLEDA GARCIA LUIS EDUARDO', status: 'pending' }
+        ],
+        investigacion_operaciones: [
+          { cuenta: '2114398', nombre: 'ABASOLO DIAZ PAMELA CONCEPCION', status: 'pending' },
+          { cuenta: '2114488', nombre: 'AYLLON CARBAJAL VALERIA', status: 'pending' },
+          { cuenta: '2421019', nombre: 'CEDILLO ROSEL XIMENA', status: 'pending' },
+          { cuenta: '2421028', nombre: 'DIAZ ESTRADA TENDZIN ANGELLO', status: 'pending' },
+          { cuenta: '2421029', nombre: 'DIAZ MARTINEZ AARON DANIEL', status: 'pending' },
+          { cuenta: '2320980', nombre: 'DIAZ VERA JESUS EMMANUEL', status: 'pending' },
+          { cuenta: '1914149', nombre: 'FLORES FLORES JOB NATANAEL', status: 'pending' },
+          { cuenta: '2460212', nombre: 'FLORES LOPEZ AMERICA FERNANDA', status: 'pending' },
+          { cuenta: '2421034', nombre: 'GARCIA MONROY HECTOR JESUS', status: 'pending' },
+          { cuenta: '1940855', nombre: 'GAYTAN RANGEL RICARDO DAVID', status: 'pending' },
+          { cuenta: '2113066', nombre: 'GUERRERO PEDROZA LUIS FERNANDO', status: 'pending' },
+          { cuenta: '2421051', nombre: 'ISLAS CRUZ JOSE', status: 'pending' },
+          { cuenta: '2421064', nombre: 'MENDOZA MARTINEZ FRIDA ALEJANDRA', status: 'pending' },
+          { cuenta: '2421065', nombre: 'MORALES MEDINA YAEL', status: 'pending' },
+          { cuenta: '2114136', nombre: 'NABOR MATIAS KEVIN ALEJANDRO', status: 'pending' },
+          { cuenta: '2110918', nombre: 'REYES CARRO ANA CECILIA', status: 'pending' },
+          { cuenta: '2421079', nombre: 'RODRIGUEZ MONROY ARIEL', status: 'pending' },
+          { cuenta: '1913774', nombre: 'SALAS GUTIERREZ ALAN DANIEL', status: 'pending' },
+          { cuenta: '2421087', nombre: 'SANTANA REYES GABRIELL QUETZALLI', status: 'pending' },
+          { cuenta: '2421089', nombre: 'TOLEDO ESCAMILLA MELANY JOANA', status: 'pending' },
+          { cuenta: '2113614', nombre: 'TRINIDAD GARCIA DULCE MARIA', status: 'pending' },
+          { cuenta: '2112567', nombre: 'VIDAL MORALES JORGE URIEL', status: 'pending' },
+          { cuenta: '2111175', nombre: 'VILLANUEVA REYES YAEL', status: 'pending' }
+        ],
+        teoria_decision: [
+          { cuenta: '2421335', nombre: 'AGUSTIN ANTOLIN ROSA ARELI', status: 'pending' },
+          { cuenta: '1210043', nombre: 'ALCANTAR GUTIERREZ LUIS ANGEL', status: 'pending' },
+          { cuenta: '2112653', nombre: 'ALVAREZ AREVALO DAYAN MICHELLE', status: 'pending' },
+          { cuenta: '2421338', nombre: 'ARMAS OCAMPO SAMUEL', status: 'pending' },
+          { cuenta: '2421341', nombre: 'CARBAJAL LEON JOSE MARIA', status: 'pending' },
+          { cuenta: '2520053', nombre: 'CEJUDO SILVA ANYELO FABRICIO', status: 'pending' },
+          { cuenta: '2110225', nombre: 'COLIN PERDOMO EBANY ALEXANDER', status: 'pending' },
+          { cuenta: '2210227', nombre: 'CONTRERAS SALAZAR JESUS', status: 'pending' },
+          { cuenta: '1941041', nombre: 'GOMEZ DOMINGUEZ ALDO ALESSANDRO', status: 'pending' },
+          { cuenta: '2110650', nombre: 'MACIAS MORENO IRAN', status: 'pending' },
+          { cuenta: '2114924', nombre: 'MARTINEZ JIMENEZ JOSE JULIAN', status: 'pending' },
+          { cuenta: '2421352', nombre: 'MORENO GARCIA ALAN', status: 'pending' },
+          { cuenta: '2113343', nombre: 'OCHOA ROJAS JUAN CARLOS CHARBEL', status: 'pending' },
+          { cuenta: '2421355', nombre: 'RAMIREZ FLORES ITZEL', status: 'pending' },
+          { cuenta: '2010995', nombre: 'ROMERO MARTINEZ ANGEL EMILIANO', status: 'pending' },
+          { cuenta: '2142110', nombre: 'SANCHEZ MIDIEL MIGUEL ANGEL', status: 'pending' },
+          { cuenta: '2115211', nombre: 'SANCHEZ MONROY CESAR AUGUSTO', status: 'pending' },
+          { cuenta: '2421361', nombre: 'TORRES TEJAS ANGEL DE JESUS', status: 'pending' },
+          { cuenta: '2421362', nombre: 'TROCHE ALEJANDRO YEHOSHUA ASAF', status: 'pending' },
+          { cuenta: '1310979', nombre: 'VALDES DIAZ ALEXIS JESUS', status: 'pending' },
+          { cuenta: '2142880', nombre: 'VALDES LAZCANO LEONARDO', status: 'pending' },
+          { cuenta: '2421364', nombre: 'ZAMORA MEJIA ROBERTO ZAID', status: 'pending' }
+        ]
+      };
+      APP_STATE.students = ROSTERS[APP_STATE.subject] || ROSTERS.optimizacion;
+      renderStudentTable();
+      actualizarEstadisticas();
+    }
+
+    function parseHoja2Fallback() {
+      const wb = APP_STATE.workbook;
+      if (!wb) return;
+      const targetSheetName = APP_STATE.mode === 'noticia' ? 'Noticia' : 'Hoja2';
+      const ws = wb.Sheets[targetSheetName] || wb.Sheets['Hoja2'] || wb.Sheets[wb.SheetNames[1]];
+      if (!ws) return;
+      const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
+      if (!data || data.length < 2) return;
+
+      const headers = data[0].map(h => String(h || '').trim());
+      const colTarget = headers.indexOf(APP_STATE.todayDateStr);
+
+      APP_STATE.students = [];
+      for (let r = 1; r < data.length; r++) {
+        const row = data[r];
+        if (!row || (!row[0] && !row[1])) continue;
+        const cuenta = String(row[0] || '').split('.')[0].trim();
+        const nombre = String(row[1] || '').trim();
+        let status = 'pending';
+        if (colTarget !== -1 && row[colTarget] !== undefined) {
+          const v = String(row[colTarget]).trim();
+          if (v === '1' || v === '1.0') status = 'present';
+          else if (v === '0' || v === '0.0') status = 'absent';
+        }
+        APP_STATE.students.push({ cuenta, nombre, status, row: r });
+      }
+      actualizarEstadisticas();
+    }
+
+    /* -------------------------------------------------------------
+       5. EVENT LISTENERS
+       ------------------------------------------------------------- */
+    function setupEventListeners() {
+      // Modo Asistencia vs Noticia
+      document.querySelectorAll('.mode-btn').forEach(btn => {
+        btn.addEventListener('click', () => setAppMode(btn.dataset.mode));
+      });
+
+      // Materia
+      document.querySelectorAll('.subj-btn').forEach(btn => {
+        btn.addEventListener('click', () => setAppSubject(btn.dataset.subj));
+      });
+
+      // Conectar Carpeta
+      document.getElementById('btn-conectar-carpeta').addEventListener('click', async () => {
+        if ('showDirectoryPicker' in window) {
+          try {
+            const dir = await window.showDirectoryPicker();
+            APP_STATE.directoryHandle = dir;
+            document.getElementById('folder-btn-text').textContent = `📁 ${dir.name}`;
+            alert(`✅ Carpeta '${dir.name}' conectada.`);
+          } catch (_) {}
+        } else {
+          alert('Tu navegador no soporta selector de carpetas directo. El servidor Python maneja la carpeta automáticamente.');
+        }
+      });
+
+      // Descargar Excel
+      document.getElementById('btn-descargar-actual').addEventListener('click', () => {
+        const conf = SUBJECT_CONFIG[APP_STATE.subject];
+        if (APP_STATE.workbook && !APP_STATE.serverConnected) {
+          XLSX.writeFile(APP_STATE.workbook, conf.fileName);
+        } else {
+          window.location.href = `archivos_excel/${conf.fileName}`;
+        }
+      });
+
+      // Cámara
+      document.getElementById('btn-toggle-cam').addEventListener('click', toggleCamera);
+
+      // Finalizar Clase
+      document.getElementById('btn-finalizar-clase').addEventListener('click', finalizarClase);
+
+      // Marcar Todos Presentes
+      document.getElementById('btn-marcar-todos-presentes').addEventListener('click', marcarTodosPresentes);
+
+      // Modales
+      document.getElementById('btn-ver-qrs').addEventListener('click', abrirModalQRs);
+      document.getElementById('btn-cerrar-modal-qrs').addEventListener('click', () => document.getElementById('modal-qrs').classList.add('hidden'));
+
+      document.getElementById('btn-abrir-modal-noticia').addEventListener('click', () => document.getElementById('modal-noticia').classList.remove('hidden'));
+      document.getElementById('btn-cerrar-modal-noticia').addEventListener('click', () => document.getElementById('modal-noticia').classList.add('hidden'));
+      document.getElementById('btn-cancelar-noticia').addEventListener('click', () => document.getElementById('modal-noticia').classList.add('hidden'));
+      document.getElementById('form-nueva-noticia').addEventListener('submit', guardarNuevaNoticia);
+
+      // Búsqueda y Filtros
+      document.getElementById('search-student').addEventListener('input', renderStudentTable);
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('bg-slate-200', 'font-bold', 'text-slate-800'));
+          btn.classList.add('bg-slate-200', 'font-bold', 'text-slate-800');
+          renderStudentTable(btn.dataset.filter);
+        });
+      });
+    }
+
+    async function setAppMode(mode) {
+      APP_STATE.mode = mode;
+      document.querySelectorAll('.mode-btn').forEach(btn => {
+        if (btn.dataset.mode === mode) {
+          btn.className = 'mode-btn active-mode flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl border-2 font-bold text-sm bg-brand-500 text-white border-brand-500 shadow-sm transition-all duration-150';
+        } else {
+          btn.className = 'mode-btn inactive-mode flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl border-2 font-bold text-sm bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 transition-all duration-150';
+        }
+      });
+
+      // Adaptar etiquetas y textos de la interfaz según el modo
+      const isNoticia = mode === 'noticia';
+      
+      const elTitle = document.getElementById('table-sheet-title');
+      if (elTitle) elTitle.textContent = isNoticia ? 'Hoja Noticia (Entregas)' : 'Hoja 2 Asistencia';
+
+      const elSubtitle = document.getElementById('table-sheet-subtitle');
+      if (elSubtitle) {
+        elSubtitle.textContent = isNoticia 
+          ? 'Registro de alumnos que entregaron (1) y quién no entregó (0) la noticia.' 
+          : 'Haz clic en 1 o 0 para modificar manualmente, o escanea el QR con la cámara.';
+      }
+
+      const elLabelPres = document.getElementById('stat-label-presentes');
+      if (elLabelPres) elLabelPres.textContent = isNoticia ? 'Entregó (1)' : 'Presentes (1)';
+
+      const elSubPres = document.getElementById('stat-sublabel-presentes');
+      if (elSubPres) elSubPres.textContent = isNoticia ? 'Noticia entregada' : 'Registrados hoy';
+
+      const elLabelAus = document.getElementById('stat-label-ausentes');
+      if (elLabelAus) elLabelAus.textContent = isNoticia ? 'No Entregó (0)' : 'Ausentes (0)';
+
+      const elSubAus = document.getElementById('stat-sublabel-ausentes');
+      if (elSubAus) elSubAus.textContent = isNoticia ? 'Sin entrega' : 'Faltas';
+
+      const elBtnFin = document.getElementById('btn-finalizar-texto');
+      if (elBtnFin) {
+        elBtnFin.textContent = isNoticia 
+          ? 'Finalizar Registro (Rellenar No Entregó con 0)' 
+          : 'Finalizar Clase (Rellenar Ausencias con 0)';
+      }
+
+      const elBtnTodos = document.getElementById('btn-todos-texto');
+      if (elBtnTodos) {
+        elBtnTodos.textContent = isNoticia ? 'Todos Entregaron' : 'Todos Presentes';
+      }
+
+      const elThEstado = document.getElementById('th-estado-col');
+      if (elThEstado) {
+        elThEstado.textContent = isNoticia ? 'Estado de Entrega' : 'Estado en Fecha';
+      }
+
+      const elFilterPres = document.getElementById('filter-btn-present');
+      if (elFilterPres) {
+        elFilterPres.textContent = isNoticia ? 'Entregaron' : 'Presentes';
+      }
+
+      const elFilterAus = document.getElementById('filter-btn-absent');
+      if (elFilterAus) {
+        elFilterAus.textContent = isNoticia ? 'No Entregó' : 'Ausentes';
+      }
+
+      await cargarDatosMateria();
+    }
+
+    async function setAppSubject(subjKey) {
+      APP_STATE.subject = subjKey;
+      document.querySelectorAll('.subj-btn').forEach(btn => {
+        if (btn.dataset.subj === subjKey) {
+          btn.className = 'subj-btn active-subj flex flex-col items-center justify-center p-2.5 rounded-xl border-2 text-center bg-brand-50 border-brand-500 text-brand-700 shadow-sm';
+        } else {
+          btn.className = 'subj-btn inactive-subj flex flex-col items-center justify-center p-2.5 rounded-xl border-2 text-center bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100';
+        }
+      });
+      await cargarDatosMateria();
+    }
+
+    /* -------------------------------------------------------------
+       6. RENDERIZADO DE TABLA Y ESTADÍSTICAS
+       ------------------------------------------------------------- */
+    function renderStudentTable(filter = 'all') {
+      const tbody = document.getElementById('student-table-body');
+      const query = document.getElementById('search-student').value.toLowerCase().trim();
+      const isNoticia = APP_STATE.mode === 'noticia';
+
+      const filtered = APP_STATE.students.filter(s => {
+        const matches = s.nombre.toLowerCase().includes(query) || s.cuenta.toLowerCase().includes(query);
+        if (!matches) return false;
+        if (filter === 'present') return s.status === 'present';
+        if (filter === 'absent') return s.status === 'absent';
+        if (filter === 'pending') return s.status === 'pending';
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5" class="py-8 text-center text-slate-400">
+              <i class="fa-solid fa-user-slash text-2xl mb-1.5 text-slate-300"></i>
+              <p>No se encontraron alumnos con los criterios seleccionados.</p>
+            </td>
+          </tr>`;
+        actualizarEstadisticas();
+        return;
+      }
+
+      tbody.innerHTML = filtered.map((st, i) => {
+        let badgeHtml = '';
+        let rowClass = '';
+
+        if (st.status === 'present') {
+          const txt = isNoticia ? 'Entregó (1)' : 'Presente (1)';
+          badgeHtml = `<span class="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[11px] inline-flex items-center gap-1"><i class="fa-solid fa-circle-check text-emerald-600"></i> ${txt}</span>`;
+          rowClass = 'bg-emerald-50/30';
+        } else if (st.status === 'absent') {
+          const txt = isNoticia ? 'No Entregó (0)' : 'Ausente (0)';
+          badgeHtml = `<span class="px-2.5 py-1 rounded-full bg-rose-100 text-rose-800 font-bold text-[11px] inline-flex items-center gap-1"><i class="fa-solid fa-circle-xmark text-rose-600"></i> ${txt}</span>`;
+          rowClass = 'bg-rose-50/30';
+        } else {
+          badgeHtml = `<span class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 font-semibold text-[11px] inline-flex items-center gap-1"><i class="fa-regular fa-clock text-slate-400"></i> Pendiente</span>`;
+        }
+
+        const titleBtn1 = isNoticia ? 'Marcar Entregó (1)' : 'Marcar Presente (1)';
+        const titleBtn0 = isNoticia ? 'Marcar No Entregó (0)' : 'Marcar Ausente (0)';
+
+        return `
+          <tr class="hover:bg-slate-50 transition border-b border-slate-100 ${rowClass}">
+            <td class="py-3 px-4 text-center font-mono text-slate-400">${i + 1}</td>
+            <td class="py-3 px-4 font-mono font-bold text-slate-700">${st.cuenta || '-'}</td>
+            <td class="py-3 px-4 font-medium text-slate-800">${st.nombre}</td>
+            <td class="py-3 px-4 text-center">${badgeHtml}</td>
+            <td class="py-3 px-4 text-center">
+              <div class="inline-flex items-center gap-1">
+                <button onclick="marcarAsistencia('${st.cuenta}', 1)" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] transition shadow-xs flex items-center gap-1" title="${titleBtn1}">
+                  <i class="fa-solid fa-check"></i> 1
+                </button>
+                <button onclick="marcarAsistencia('${st.cuenta}', 0)" class="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-[11px] transition shadow-xs flex items-center gap-1" title="${titleBtn0}">
+                  <i class="fa-solid fa-xmark"></i> 0
+                </button>
+                <button onclick="marcarAsistencia('${st.cuenta}', null)" class="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-[11px] transition" title="Limpiar">
+                  <i class="fa-solid fa-rotate-left"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      actualizarEstadisticas();
+    }
+
+    function actualizarEstadisticas(tot, pres, aus, pend) {
+      const total = tot !== undefined ? tot : APP_STATE.students.length;
+      const presentes = pres !== undefined ? pres : APP_STATE.students.filter(s => s.status === 'present').length;
+      const ausentes = aus !== undefined ? aus : APP_STATE.students.filter(s => s.status === 'absent').length;
+      const pendientes = pend !== undefined ? pend : APP_STATE.students.filter(s => s.status === 'pending').length;
+
+      document.getElementById('stat-total').textContent = total;
+      document.getElementById('stat-presentes').textContent = presentes;
+      document.getElementById('stat-ausentes').textContent = ausentes;
+      document.getElementById('stat-pendientes').textContent = pendientes;
+    }
+
+    /* -------------------------------------------------------------
+       7. OPERACIONES DE ASISTENCIA (COMUNICACIÓN CON PYTHON)
+       ------------------------------------------------------------- */
+    window.marcarAsistencia = async function(cuenta, valor) {
+      const st = APP_STATE.students.find(s => s.cuenta === cuenta);
+      if (st) {
+        st.status = valor === 1 ? 'present' : (valor === 0 ? 'absent' : 'pending');
+        actualizarCeldaWorkbookFallback(cuenta, valor);
+        renderStudentTable();
+      }
+
+      if (APP_STATE.serverConnected) {
+        try {
+          const resp = await fetch('/api/marcar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              materia: APP_STATE.subject,
+              cuenta: cuenta,
+              fecha: APP_STATE.todayDateStr,
+              valor: valor,
+              modo: APP_STATE.mode
+            })
+          });
+          const data = await resp.json();
+          if (!data.ok) alert(data.error || 'Error al guardar en Excel.');
+        } catch (e) {
+          console.error('Error al guardar en Python:', e);
+        }
+      }
+    };
+
+    function actualizarCeldaWorkbookFallback(cuenta, valor) {
+      if (!APP_STATE.workbook) return;
+      const sheetName = APP_STATE.mode === 'noticia' ? 'Noticia' : 'Hoja2';
+      const ws = APP_STATE.workbook.Sheets[sheetName];
+      if (!ws) return;
+
+      const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
+      if (!data || data.length < 2) return;
+
+      const headers = data[0].map(h => String(h || '').trim());
+      const colIdx = headers.indexOf(APP_STATE.todayDateStr);
+      if (colIdx === -1) return;
+
+      for (let r = 1; r < data.length; r++) {
+        const row = data[r];
+        if (!row) continue;
+        const cVal = String(row[0] || '').split('.')[0].trim();
+        if (cVal === cuenta) {
+          const cellRef = XLSX.utils.encode_cell({ r: r, c: colIdx });
+          if (valor !== null && valor !== undefined) {
+            ws[cellRef] = { t: 'n', v: valor };
+          } else {
+            delete ws[cellRef];
+          }
+          break;
+        }
+      }
+    }
+
+    async function finalizarClase() {
+      const hojaTxt = APP_STATE.mode === 'noticia' ? 'Noticia' : 'Hoja 2 (Asistencia)';
+      const msgConfirm = APP_STATE.mode === 'noticia'
+        ? `¿Finalizar registro en Noticia de ${SUBJECT_CONFIG[APP_STATE.subject].name} para la fecha ${APP_STATE.todayDateStr}?\n\nTodos los alumnos sin calificar serán marcados como NO ENTREGÓ (0).`
+        : `¿Finalizar registro en Hoja 2 de ${SUBJECT_CONFIG[APP_STATE.subject].name} para la fecha ${APP_STATE.todayDateStr}?\n\nTodos los alumnos pendientes serán registrados como AUSENTES (0).`;
+
+      if (!confirm(msgConfirm)) {
+        return;
+      }
+
+      if (APP_STATE.serverConnected) {
+        try {
+          const resp = await fetch('/api/finalizar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              materia: APP_STATE.subject,
+              fecha: APP_STATE.todayDateStr,
+              modo: APP_STATE.mode
+            })
+          });
+          const data = await resp.json();
+          if (data.ok) {
+            alert(`✅ ${data.mensaje}`);
+            await cargarDatosMateria();
+            return;
+          } else {
+            alert(data.error || 'Error al finalizar clase.');
+          }
+        } catch (e) {
+          console.error('Error en finalizar clase:', e);
+        }
+      }
+
+      // Fallback local (para Netlify o sin Python)
+      APP_STATE.students.forEach(s => {
+        if (s.status === 'pending') {
+          s.status = 'absent';
+          actualizarCeldaWorkbookFallback(s.cuenta, 0);
+        }
+      });
+      renderStudentTable();
+      alert(`✅ Registro finalizado localmente. Todas las casillas sin marcar se registraron con 0.`);
+    }
+
+    async function marcarTodosPresentes() {
+      const isNoticia = APP_STATE.mode === 'noticia';
+      const promptTxt = isNoticia ? '¿Marcar a TODOS los alumnos con Noticia Entregada (1)?' : '¿Marcar a TODOS los alumnos como Presentes (1)?';
+      if (!confirm(promptTxt)) return;
+
+      for (const st of APP_STATE.students) {
+        st.status = 'present';
+        actualizarCeldaWorkbookFallback(st.cuenta, 1);
+        if (APP_STATE.serverConnected) {
+          fetch('/api/marcar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ materia: APP_STATE.subject, cuenta: st.cuenta, fecha: APP_STATE.todayDateStr, valor: 1, modo: APP_STATE.mode })
+          });
+        }
+      }
+      renderStudentTable();
+    }
+
+    /* -------------------------------------------------------------
+       8. CÁMARA ESCÁNER QR
+       ------------------------------------------------------------- */
+    function toggleCamera() {
+      if (APP_STATE.cameraActive) stopCamera();
+      else startCamera();
+    }
+
+    async function startCamera() {
+      const video = document.getElementById('camera-feed');
+      const placeholder = document.getElementById('camera-placeholder');
+      const scanFrame = document.getElementById('scan-frame');
+      const btn = document.getElementById('btn-toggle-cam');
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+        });
+        APP_STATE.videoStream = stream;
+        video.srcObject = stream;
+        video.classList.remove('hidden');
+        placeholder.classList.add('hidden');
+        scanFrame.classList.remove('hidden');
+        btn.innerHTML = '<i class="fa-solid fa-stop mr-1"></i> Detener';
+        btn.className = 'px-3 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold transition';
+        APP_STATE.cameraActive = true;
+
+        video.play();
+        requestAnimationFrame(tickScan);
+      } catch (err) {
+        console.error('Error accediendo a cámara:', err);
+        alert('No se pudo acceder a la cámara. Revisa los permisos de tu navegador.');
+      }
+    }
+
+    function stopCamera() {
+      if (APP_STATE.videoStream) {
+        APP_STATE.videoStream.getTracks().forEach(t => t.stop());
+        APP_STATE.videoStream = null;
+      }
+      const video = document.getElementById('camera-feed');
+      const placeholder = document.getElementById('camera-placeholder');
+      const scanFrame = document.getElementById('scan-frame');
+      const btn = document.getElementById('btn-toggle-cam');
+
+      video.classList.add('hidden');
+      placeholder.classList.remove('hidden');
+      scanFrame.classList.add('hidden');
+      btn.innerHTML = '<i class="fa-solid fa-video mr-1"></i> Abrir Cámara';
+      btn.className = 'px-3 py-1 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold transition';
+      APP_STATE.cameraActive = false;
+    }
+
+    function tickScan() {
+      if (!APP_STATE.cameraActive) return;
+      const video = document.getElementById('camera-feed');
+      const canvas = document.getElementById('camera-canvas');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: 'dontInvert'
+        });
+
+        if (code && code.data) {
+          procesarEscaneoQR(code.data);
+        }
+      }
+      requestAnimationFrame(tickScan);
+    }
+
+    async function procesarEscaneoQR(qrText) {
+      const now = Date.now();
+      if (qrText === APP_STATE.lastScannedData && (now - APP_STATE.lastScanTimestamp < APP_STATE.scanCooldownMs)) {
+        return;
+      }
+      APP_STATE.lastScannedData = qrText;
+      APP_STATE.lastScanTimestamp = now;
+
+      const feedback = document.getElementById('scan-feedback');
+
+      if (APP_STATE.serverConnected) {
+        try {
+          const resp = await fetch('/api/scan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              materia: APP_STATE.subject,
+              qr_data: qrText,
+              fecha: APP_STATE.todayDateStr,
+              modo: APP_STATE.mode
+            })
+          });
+          const data = await resp.json();
+          if (data.ok) {
+            playBeep(true);
+            feedback.className = 'mt-3 p-3 rounded-xl bg-emerald-100 border border-emerald-300 text-xs text-center text-emerald-800 font-bold flex items-center justify-center gap-2';
+            feedback.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600 text-base"></i> ✅ ¡${data.alumno.nombre} registrado con éxito (1)!`;
+
+            const st = APP_STATE.students.find(s => s.cuenta === data.alumno.cuenta);
+            if (st) st.status = 'present';
+            renderStudentTable();
+            return;
+          } else {
+            playBeep(false);
+            feedback.className = 'mt-3 p-3 rounded-xl bg-rose-100 border border-rose-300 text-xs text-center text-rose-800 font-bold flex items-center justify-center gap-2';
+            feedback.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-rose-600 text-base"></i> ${data.error}`;
+            return;
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      // Fallback si no hay backend (ej. Netlify)
+      const parts = qrText.split('|');
+      const cuenta = parts[0].trim();
+      const st = APP_STATE.students.find(s => s.cuenta === cuenta || s.nombre.toLowerCase().includes(qrText.toLowerCase()));
+      if (st) {
+        st.status = 'present';
+        actualizarCeldaWorkbookFallback(st.cuenta, 1);
+        renderStudentTable();
+        playBeep(true);
+        const msg = APP_STATE.mode === 'noticia' ? `¡Noticia de ${st.nombre} registrada (1)!` : `¡${st.nombre} registrado (1)!`;
+        feedback.className = 'mt-3 p-3 rounded-xl bg-emerald-100 border border-emerald-300 text-xs text-center text-emerald-800 font-bold flex items-center justify-center gap-2';
+        feedback.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600 text-base"></i> ✅ ${msg}`;
+      } else {
+        playBeep(false);
+        feedback.className = 'mt-3 p-3 rounded-xl bg-rose-100 border border-rose-300 text-xs text-center text-rose-800 font-bold flex items-center justify-center gap-2';
+        feedback.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-rose-600 text-base"></i> QR no reconocido (${qrText.substring(0, 20)})`;
+      }
+    }
+
+    function playBeep(success) {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = success ? 'sine' : 'sawtooth';
+        osc.frequency.value = success ? 880 : 240;
+        gain.gain.setValueAtTime(0.25, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.25);
+      } catch (_) {}
+    }
+
+    /* -------------------------------------------------------------
+       9. NOTICIAS Y TABLÓN
+       ------------------------------------------------------------- */
+    function renderNoticiasCards() {
+      const container = document.getElementById('noticias-container');
+      if (!container) return;
+
+      if (APP_STATE.noticias.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full bg-white rounded-2xl p-8 text-center text-slate-400 border border-slate-200">
+            <i class="fa-solid fa-inbox text-3xl mb-2 text-slate-300"></i>
+            <p class="text-sm font-semibold">No hay noticias o avisos registrados en esta materia.</p>
+            <p class="text-xs text-slate-400 mt-1">Haz clic en "Publicar Nueva Noticia" para redactar una.</p>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = APP_STATE.noticias.map(n => {
+        let badgeColor = 'bg-blue-100 text-blue-800';
+        let icon = 'fa-info-circle';
+        if (n.prioridad === 'Urgente') { badgeColor = 'bg-rose-100 text-rose-800'; icon = 'fa-triangle-exclamation'; }
+        else if (n.prioridad === 'Examen') { badgeColor = 'bg-amber-100 text-amber-800'; icon = 'fa-clipboard-question'; }
+        else if (n.prioridad === 'Tarea') { badgeColor = 'bg-emerald-100 text-emerald-800'; icon = 'fa-book'; }
+
+        return `
+          <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 flex flex-col justify-between hover:shadow-md transition">
+            <div>
+              <div class="flex items-center justify-between gap-2 mb-2">
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${badgeColor} inline-flex items-center gap-1">
+                  <i class="fa-solid ${icon}"></i> ${n.prioridad}
+                </span>
+                <span class="text-[11px] text-slate-400 font-mono">${n.fecha}</span>
+              </div>
+              <h4 class="font-bold text-slate-800 text-sm mb-2">${n.titulo}</h4>
+              <p class="text-xs text-slate-600 leading-relaxed whitespace-pre-line">${n.cuerpo}</p>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+              <button onclick="copiarNoticia('${encodeURIComponent(n.titulo)}', '${encodeURIComponent(n.cuerpo)}')" class="text-brand-600 hover:text-brand-700 font-semibold flex items-center gap-1 text-[11px]">
+                <i class="fa-regular fa-copy"></i> Copiar para WhatsApp
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function guardarNuevaNoticia(e) {
+      e.preventDefault();
+      const titulo = document.getElementById('noticia-titulo').value.trim();
+      const prioridad = document.getElementById('noticia-prioridad').value;
+      const fecha = document.getElementById('noticia-fecha').value.trim() || APP_STATE.todayDateStr;
+      const cuerpo = document.getElementById('noticia-cuerpo').value.trim();
+
+      if (!titulo || !cuerpo) return;
+
+      if (APP_STATE.serverConnected) {
+        try {
+          const resp = await fetch('/api/noticias', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              materia: APP_STATE.subject,
+              titulo: titulo,
+              prioridad: prioridad,
+              fecha: fecha,
+              cuerpo: cuerpo
+            })
+          });
+          const data = await resp.json();
+          if (data.ok) {
+            alert('✅ Noticia guardada con éxito en la hoja Noticias del Excel.');
+            await cargarDatosMateria();
+          } else {
+            alert(data.error || 'Error al guardar la noticia.');
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      } else {
+        APP_STATE.noticias.unshift({ fecha, titulo, prioridad, cuerpo });
+        renderNoticiasCards();
+        alert('✅ Noticia agregada localmente.');
+      }
+
+      document.getElementById('form-nueva-noticia').reset();
+      document.getElementById('noticia-fecha').value = APP_STATE.todayDateStr;
+      document.getElementById('modal-noticia').classList.add('hidden');
+    }
+
+    window.copiarNoticia = function(encTitulo, encCuerpo) {
+      const titulo = decodeURIComponent(encTitulo);
+      const cuerpo = decodeURIComponent(encCuerpo);
+      const conf = SUBJECT_CONFIG[APP_STATE.subject];
+      const texto = `📢 *AVISO - ${conf.name}*\n📅 *Fecha:* ${APP_STATE.todayDateStr}\n📌 *${titulo}*\n\n${cuerpo}`;
+
+      navigator.clipboard.writeText(texto).then(() => {
+        alert('📋 ¡Aviso copiado al portapapeles! Listo para pegar en WhatsApp o Teams.');
+      });
+    };
+
+    /* -------------------------------------------------------------
+       10. VISUALIZADOR DE QRS PARA IMPRIMIR
+       ------------------------------------------------------------- */
+    function abrirModalQRs() {
+      const container = document.getElementById('qr-print-container');
+      container.innerHTML = '';
+
+      if (APP_STATE.students.length === 0) {
+        container.innerHTML = '<p class="text-center text-slate-400 col-span-full py-8">No hay alumnos en la lista actual.</p>';
+      } else {
+        APP_STATE.students.forEach((st, idx) => {
+          const card = document.createElement('div');
+          card.className = 'bg-white rounded-xl p-4 border border-slate-200 shadow-sm flex flex-col items-center text-center';
+          const qrId = `qr-canvas-${idx}`;
+
+          card.innerHTML = `
+            <div class="text-[11px] font-bold text-brand-700 uppercase tracking-wider mb-1">${SUBJECT_CONFIG[APP_STATE.subject].name}</div>
+            <div id="${qrId}" class="p-2 bg-white rounded-lg border border-slate-200 my-1"></div>
+            <div class="font-bold text-xs text-slate-800 mt-1">${st.nombre}</div>
+            <div class="text-[11px] text-slate-500 font-mono">Cuenta: ${st.cuenta}</div>
+          `;
+          container.appendChild(card);
+
+          setTimeout(() => {
+            new QRCode(document.getElementById(qrId), {
+              text: `${st.cuenta}|${st.nombre}`,
+              width: 128,
+              height: 128,
+              colorDark: "#000000",
+              colorLight: "#ffffff",
+              correctLevel: QRCode.CorrectLevel.M
+            });
+          }, 10);
+        });
+      }
+
+      document.getElementById('modal-qrs').classList.remove('hidden');
+    }
+  </script>
+</body>
+</html>

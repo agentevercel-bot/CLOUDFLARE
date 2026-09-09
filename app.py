@@ -1,0 +1,515 @@
+"""
+app.py — Servidor Flask para Asistencia QR y Gestión Académica
+Con persistencia en Cloudflare R2 (S3 compatible) para despliegue en Render (disco efímero).
+- Los archivos se descargan a /tmp/ bajo demanda si el servidor se reinicia o duerme.
+- Cada modificación se guarda localmente y se sube de inmediato a Cloudflare R2.
+- Mantiene el 100% de la compatibilidad con openpyxl, colores, formatos y frontend original.
+"""
+
+import os
+import sys
+import io
+import datetime
+from flask import Flask, request, jsonify, send_file, send_from_directory
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
+
+import r2_storage
+
+# Fix encoding para la consola
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+
+app = Flask(__name__, static_folder=None)
+
+MATERIAS = {
+    'optimizacion': {
+        'nombre': 'Optimización',
+        'horario': '9:00 - 11:00',
+        'archivo': 'IIAT31-OPTIMIZACION-A1.xlsx'
+    },
+    'investigacion_operaciones': {
+        'nombre': 'Investigación de Operaciones',
+        'horario': '11:00 - 1:00',
+        'archivo': 'IIAT33-INVESTIGACION DE OPERACIONES-A3.xlsx'
+    },
+    'teoria_decision': {
+        'nombre': 'Teoría de la Decisión',
+        'horario': '1:00 - 3:00',
+        'archivo': 'IIAT32-TEORIA DE LA DECISION-A2.xlsx'
+    }
+}
+
+# Estilos de celdas
+FILL_GREEN = PatternFill('solid', fgColor='C6EFCE')
+FONT_GREEN = Font(color='276221', bold=True)
+FILL_RED = PatternFill('solid', fgColor='FFC7CE')
+FONT_RED = Font(color='9C0006', bold=True)
+FILL_HDR = PatternFill('solid', fgColor='1F4E79')
+FONT_HDR = Font(bold=True, color='FFFFFF')
+ALIGN_CENTER = Alignment(horizontal='center', vertical='center')
+
+
+def get_fecha_hoy_str():
+    """Devuelve la fecha actual en formato DD/MM/YYYY."""
+    return datetime.datetime.now().strftime('%d/%m/%Y')
+
+
+def get_filepath(materia_key, force_download=False):
+    """
+    Obtiene la ruta local en /tmp/ del archivo de la materia.
+    Asegura que esté descargado desde Cloudflare R2.
+    """
+    info = MATERIAS.get(materia_key)
+    if not info:
+        return None, None
+    filename = info['archivo']
+    local_path = r2_storage.ensure_file_local(filename, force_download=force_download)
+    return local_path, filename
+
+
+def guardar_workbook_seguro(wb, local_path, filename):
+    """
+    Guarda el workbook en el disco local (/tmp/) y lo sube inmediatamente a Cloudflare R2.
+    """
+    try:
+        wb.save(local_path)
+    except Exception as e:
+        return False, f"Error al guardar localmente: {str(e)}"
+
+    # Persistencia en la nube (Cloudflare R2)
+    subido = r2_storage.upload_file_to_r2(filename)
+    if not subido and r2_storage.is_r2_configured():
+        return False, "Error al sincronizar el archivo con Cloudflare R2."
+
+    return True, None
+
+
+def get_target_sheet(wb, modo='asistencia'):
+    """
+    Retorna la hoja correspondiente según el modo:
+    - modo 'noticia'   -> Hoja 'Noticia' (o 'Noticias')
+    - modo 'asistencia' -> Hoja 'Hoja2' (o 'Asistencia')
+    """
+    m = str(modo or 'asistencia').lower().strip()
+    if m == 'noticia':
+        for sname in ['Noticia', 'Noticias']:
+            if sname in wb.sheetnames:
+                return wb[sname]
+        # Si no existe, crear la hoja Noticia basada en Hoja2
+        ws = wb.create_sheet(title='Noticia')
+        ws_ref = wb['Hoja2'] if 'Hoja2' in wb.sheetnames else wb.worksheets[1]
+        for c in range(1, ws_ref.max_column + 1):
+            ws.cell(row=1, column=c, value=ws_ref.cell(row=1, column=c).value)
+        for r in range(2, ws_ref.max_row + 1):
+            ws.cell(row=r, column=1, value=ws_ref.cell(row=r, column=1).value)
+            ws.cell(row=r, column=2, value=ws_ref.cell(row=r, column=2).value)
+        return ws
+    else:
+        for sname in ['Hoja2', 'Asistencia']:
+            if sname in wb.sheetnames:
+                return wb[sname]
+        return wb.worksheets[1] if len(wb.worksheets) > 1 else wb.active
+
+
+# ─── RUTAS PRINCIPALES ────────────────────────────────────────────────────────
+
+@app.route('/')
+def serve_index():
+    """Sirve la interfaz web principal."""
+    return send_from_directory('.', 'index.html')
+
+
+@app.route('/api/materias', methods=['GET'])
+def get_materias():
+    """Devuelve la configuración de materias y horarios."""
+    return jsonify({
+        'ok': True,
+        'materias': MATERIAS,
+        'fecha_hoy': get_fecha_hoy_str()
+    })
+
+
+@app.route('/api/datos', methods=['GET'])
+def get_datos_materia():
+    """
+    Carga los alumnos, fechas de clase y asistencias de la hoja objetivo (Hoja2 o Noticia).
+    Descarga previamente de R2 si el archivo no existe en /tmp/.
+    """
+    materia_key = request.args.get('materia', 'optimizacion')
+    fecha_filtro = request.args.get('fecha', get_fecha_hoy_str())
+    modo = request.args.get('modo', 'asistencia').lower().strip()
+
+    path, filename = get_filepath(materia_key)
+    if not path or not os.path.exists(path):
+        return jsonify({'ok': False, 'error': f"Archivo para '{materia_key}' no encontrado ni en local ni en R2."}), 404
+
+    try:
+        wb = openpyxl.load_workbook(path, data_only=True)
+    except Exception as e:
+        return jsonify({'ok': False, 'error': f"Error al abrir Excel: {str(e)}"}), 500
+
+    ws_target = get_target_sheet(wb, modo)
+    
+    headers = []
+    col_fecha_target = -1
+
+    for col in range(1, ws_target.max_column + 1):
+        val = ws_target.cell(row=1, column=col).value
+        str_val = str(val).strip() if val is not None else ''
+        headers.append(str_val)
+        if col > 2 and str_val == fecha_filtro:
+            col_fecha_target = col
+
+    fechas_clase = [h for h in headers[2:] if h]
+
+    students = []
+    presentes_count = 0
+    ausentes_count = 0
+    pendientes_count = 0
+
+    for r in range(2, ws_target.max_row + 1):
+        cuenta = ws_target.cell(row=r, column=1).value
+        nombre = ws_target.cell(row=r, column=2).value
+        if not cuenta and not nombre:
+            continue
+
+        cuenta_str = str(cuenta).split('.')[0].strip() if cuenta is not None else ''
+        nombre_str = str(nombre).strip() if nombre is not None else ''
+
+        val_hoy = None
+        status = 'pending'
+        if col_fecha_target != -1:
+            raw_v = ws_target.cell(row=r, column=col_fecha_target).value
+            if raw_v is not None and str(raw_v).strip() != '':
+                try:
+                    val_num = int(float(raw_v))
+                    val_hoy = val_num
+                    if val_num == 1:
+                        status = 'present'
+                        presentes_count += 1
+                    elif val_num == 0:
+                        status = 'absent'
+                        ausentes_count += 1
+                except:
+                    pass
+
+        if status == 'pending':
+            pendientes_count += 1
+
+        students.append({
+            'row': r,
+            'cuenta': cuenta_str,
+            'nombre': nombre_str,
+            'status': status,
+            'val_hoy': val_hoy
+        })
+
+    wb.close()
+
+    return jsonify({
+        'ok': True,
+        'materia': MATERIAS[materia_key],
+        'fecha': fecha_filtro,
+        'modo': modo,
+        'col_fecha_encontrada': col_fecha_target != -1,
+        'fechas_disponibles': fechas_clase,
+        'total_alumnos': len(students),
+        'presentes': presentes_count,
+        'ausentes': ausentes_count,
+        'pendientes': pendientes_count,
+        'students': students
+    })
+
+
+@app.route('/api/scan', methods=['POST'])
+def registrar_escaneo_qr():
+    """
+    Procesa un escaneo de QR (o ID/nombre), marca 1 en la fecha indicada en la hoja activa (Hoja2 o Noticia)
+    y sincroniza con Cloudflare R2.
+    """
+    data = request.get_json() or {}
+    materia_key = data.get('materia', 'optimizacion')
+    qr_data = str(data.get('qr_data', '')).strip()
+    fecha = data.get('fecha', get_fecha_hoy_str()).strip()
+    modo = data.get('modo', 'asistencia').lower().strip()
+
+    if not qr_data:
+        return jsonify({'ok': False, 'error': 'Datos de QR vacíos.'}), 400
+
+    path, filename = get_filepath(materia_key)
+    if not path or not os.path.exists(path):
+        return jsonify({'ok': False, 'error': 'Archivo no encontrado.'}), 404
+
+    partes = qr_data.split('|')
+    cuenta_buscada = partes[0].strip()
+    nombre_buscado = partes[1].strip() if len(partes) > 1 else ''
+
+    wb = openpyxl.load_workbook(path)
+    ws_target = get_target_sheet(wb, modo)
+
+    # Buscar columna de fecha
+    col_fecha = -1
+    for col in range(3, ws_target.max_column + 1):
+        if str(ws_target.cell(row=1, column=col).value).strip() == fecha:
+            col_fecha = col
+            break
+
+    # Si la fecha no existe, crear la columna al final
+    if col_fecha == -1:
+        col_fecha = ws_target.max_column + 1
+        h_cell = ws_target.cell(row=1, column=col_fecha, value=fecha)
+        h_cell.fill = PatternFill('solid', fgColor='2E75B6')
+        h_cell.font = FONT_HDR
+        h_cell.alignment = ALIGN_CENTER
+        ws_target.column_dimensions[get_column_letter(col_fecha)].width = 13
+
+    alumno_encontrado = None
+    row_encontrada = -1
+
+    for r in range(2, ws_target.max_row + 1):
+        c_val = str(ws_target.cell(row=r, column=1).value or '').split('.')[0].strip()
+        n_val = str(ws_target.cell(row=r, column=2).value or '').strip()
+
+        if cuenta_buscada and c_val == cuenta_buscada:
+            alumno_encontrado = {'cuenta': c_val, 'nombre': n_val}
+            row_encontrada = r
+            break
+        elif nombre_buscado and nombre_buscado.lower() in n_val.lower():
+            alumno_encontrado = {'cuenta': c_val, 'nombre': n_val}
+            row_encontrada = r
+            break
+        elif qr_data.lower() in n_val.lower() or qr_data == c_val:
+            alumno_encontrado = {'cuenta': c_val, 'nombre': n_val}
+            row_encontrada = r
+            break
+
+    if not alumno_encontrado:
+        wb.close()
+        return jsonify({'ok': False, 'error': f"Alumno no encontrado en la lista ({qr_data})"}), 404
+
+    # Escribir 1 (Presente / Cumplió)
+    cell = ws_target.cell(row=row_encontrada, column=col_fecha, value=1)
+    cell.fill = FILL_GREEN
+    cell.font = FONT_GREEN
+    cell.alignment = ALIGN_CENTER
+
+    ok, err = guardar_workbook_seguro(wb, path, filename)
+    wb.close()
+
+    if not ok:
+        return jsonify({'ok': False, 'error': err}), 500
+
+    return jsonify({
+        'ok': True,
+        'mensaje': f"Registrado para {alumno_encontrado['nombre']} en {modo.capitalize()}",
+        'alumno': alumno_encontrado
+    })
+
+
+@app.route('/api/marcar', methods=['POST'])
+def marcar_asistencia_manual():
+    """
+    Marca un estado manual (1, 0, o vacío) para un alumno en una fecha dada en la hoja activa
+    y sincroniza con Cloudflare R2.
+    """
+    data = request.get_json() or {}
+    materia_key = data.get('materia', 'optimizacion')
+    cuenta = str(data.get('cuenta', '')).strip()
+    fecha = str(data.get('fecha', get_fecha_hoy_str())).strip()
+    valor = data.get('valor')
+    modo = data.get('modo', 'asistencia').lower().strip()
+
+    path, filename = get_filepath(materia_key)
+    if not path or not os.path.exists(path):
+        return jsonify({'ok': False, 'error': 'Archivo no encontrado.'}), 404
+
+    wb = openpyxl.load_workbook(path)
+    ws_target = get_target_sheet(wb, modo)
+
+    col_fecha = -1
+    for col in range(3, ws_target.max_column + 1):
+        if str(ws_target.cell(row=1, column=col).value).strip() == fecha:
+            col_fecha = col
+            break
+
+    if col_fecha == -1:
+        wb.close()
+        return jsonify({'ok': False, 'error': f"Fecha '{fecha}' no encontrada en el Excel."}), 404
+
+    target_row = -1
+    for r in range(2, ws_target.max_row + 1):
+        c_val = str(ws_target.cell(row=r, column=1).value or '').split('.')[0].strip()
+        if c_val == cuenta:
+            target_row = r
+            break
+
+    if target_row == -1:
+        wb.close()
+        return jsonify({'ok': False, 'error': 'Alumno no encontrado.'}), 404
+
+    cell = ws_target.cell(row=target_row, column=col_fecha)
+    if valor == 1:
+        cell.value = 1
+        cell.fill = FILL_GREEN
+        cell.font = FONT_GREEN
+        cell.alignment = ALIGN_CENTER
+    elif valor == 0:
+        cell.value = 0
+        cell.fill = FILL_RED
+        cell.font = FONT_RED
+        cell.alignment = ALIGN_CENTER
+    else:
+        cell.value = None
+        cell.fill = PatternFill(fill_type=None)
+        cell.font = Font(name='Calibri')
+
+    ok, err = guardar_workbook_seguro(wb, path, filename)
+    wb.close()
+
+    if not ok:
+        return jsonify({'ok': False, 'error': err}), 500
+
+    return jsonify({'ok': True, 'cuenta': cuenta, 'valor': valor})
+
+
+@app.route('/api/finalizar', methods=['POST'])
+def finalizar_clase():
+    """
+    Rellena todas las celdas vacías del día con 0 (Ausente) en la hoja activa
+    y sincroniza con Cloudflare R2.
+    """
+    data = request.get_json() or {}
+    materia_key = data.get('materia', 'optimizacion')
+    fecha = str(data.get('fecha', get_fecha_hoy_str())).strip()
+    modo = data.get('modo', 'asistencia').lower().strip()
+
+    path, filename = get_filepath(materia_key)
+    if not path or not os.path.exists(path):
+        return jsonify({'ok': False, 'error': 'Archivo no encontrado.'}), 404
+
+    wb = openpyxl.load_workbook(path)
+    ws_target = get_target_sheet(wb, modo)
+
+    col_fecha = -1
+    for col in range(3, ws_target.max_column + 1):
+        if str(ws_target.cell(row=1, column=col).value).strip() == fecha:
+            col_fecha = col
+            break
+
+    if col_fecha == -1:
+        wb.close()
+        return jsonify({'ok': False, 'error': f"Fecha '{fecha}' no encontrada en el Excel."}), 404
+
+    presentes = 0
+    ausentes_rellenados = 0
+    total = 0
+
+    for r in range(2, ws_target.max_row + 1):
+        cuenta_v = ws_target.cell(row=r, column=1).value
+        nombre_v = ws_target.cell(row=r, column=2).value
+        if not cuenta_v and not nombre_v:
+            continue
+        total += 1
+
+        cell = ws_target.cell(row=r, column=col_fecha)
+        raw = cell.value
+
+        if raw is not None and str(raw).strip() != '':
+            try:
+                if int(float(raw)) == 1:
+                    presentes += 1
+            except:
+                pass
+        else:
+            cell.value = 0
+            cell.fill = FILL_RED
+            cell.font = FONT_RED
+            cell.alignment = ALIGN_CENTER
+            ausentes_rellenados += 1
+
+    ok, err = guardar_workbook_seguro(wb, path, filename)
+    wb.close()
+
+    if not ok:
+        return jsonify({'ok': False, 'error': err}), 500
+
+    nombre_hoja = "Noticia" if modo == "noticia" else "Asistencia (Hoja 2)"
+    return jsonify({
+        'ok': True,
+        'fecha': fecha,
+        'total': total,
+        'presentes': presentes,
+        'ausentes': ausentes_rellenados,
+        'mensaje': f"Finalizado en {nombre_hoja}: {presentes} con valor 1 y {ausentes_rellenados} marcadas con 0."
+    })
+
+
+@app.route('/api/noticias', methods=['POST'])
+def agregar_noticia():
+    """Agrega una nueva noticia/aviso a la hoja Noticias del Excel y sincroniza con R2."""
+    data = request.get_json() or {}
+    materia_key = data.get('materia', 'optimizacion')
+    titulo = str(data.get('titulo', '')).strip()
+    cuerpo = str(data.get('cuerpo', '')).strip()
+    prioridad = str(data.get('prioridad', 'Informativo')).strip()
+    fecha = str(data.get('fecha', get_fecha_hoy_str())).strip()
+
+    if not titulo or not cuerpo:
+        return jsonify({'ok': False, 'error': 'Título y contenido son requeridos.'}), 400
+
+    path, filename = get_filepath(materia_key)
+    if not path or not os.path.exists(path):
+        return jsonify({'ok': False, 'error': 'Archivo no encontrado.'}), 404
+
+    wb = openpyxl.load_workbook(path)
+    if 'Noticias' not in wb.sheetnames:
+        ws_not = wb.create_sheet('Noticias')
+        for c_i, h in enumerate(['FECHA', 'TÍTULO', 'PRIORIDAD', 'DESCRIPCIÓN / AVISO'], start=1):
+            c = ws_not.cell(row=1, column=c_i, value=h)
+            c.fill = FILL_HDR
+            c.font = FONT_HDR
+    else:
+        ws_not = wb['Noticias']
+
+    next_row = ws_not.max_row + 1
+    ws_not.cell(row=next_row, column=1, value=fecha)
+    ws_not.cell(row=next_row, column=2, value=titulo)
+    ws_not.cell(row=next_row, column=3, value=prioridad)
+    ws_not.cell(row=next_row, column=4, value=cuerpo)
+
+    ok, err = guardar_workbook_seguro(wb, path, filename)
+    wb.close()
+
+    if not ok:
+        return jsonify({'ok': False, 'error': err}), 500
+
+    return jsonify({'ok': True, 'mensaje': 'Noticia agregada con éxito en el archivo Excel.'})
+
+
+@app.route('/archivos_excel/<path:filename>')
+def serve_excel_file(filename):
+    """
+    Permite descargar los archivos Excel directamente.
+    Asegura que se entregue la versión más reciente descargada de R2.
+    """
+    local_path = r2_storage.ensure_file_local(filename)
+    if not os.path.exists(local_path):
+        return jsonify({'ok': False, 'error': 'Archivo no encontrado'}), 404
+    return send_file(local_path, as_attachment=True, download_name=filename)
+
+
+# ─── INICIO DEL SERVIDOR ──────────────────────────────────────────────────────
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    print("=" * 60)
+    print("  📋 PORTAL ACADÉMICO — CLOUDFLARE R2 + RENDER")
+    print("=" * 60)
+    print(f"  ☁️ Cloudflare R2 : {'Conectado' if r2_storage.is_r2_configured() else 'Modo Local /tmp'}")
+    print(f"  📅 Fecha actual  : {get_fecha_hoy_str()}")
+    print(f"  🌐 Dirección Web : http://localhost:{port}")
+    print("=" * 60)
+    print("  Presiona Ctrl+C en esta consola para detener el servidor.\n")
+
+    app.run(host='0.0.0.0', port=port, debug=False)
