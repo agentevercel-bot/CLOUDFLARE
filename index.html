@@ -55,11 +55,165 @@
       border-radius: 2px;
       animation: scanMove 2.2s ease-in-out infinite;
     }
+    .qr-code-wrapper {
+      width: 140px;
+      height: 140px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 6px auto;
+      flex-shrink: 0;
+      box-sizing: border-box;
+      aspect-ratio: 1 / 1;
+    }
+    .qr-code-wrapper canvas,
+    .qr-code-wrapper img {
+      width: 128px !important;
+      height: 128px !important;
+      min-width: 128px !important;
+      min-height: 128px !important;
+      max-width: 128px !important;
+      max-height: 128px !important;
+      aspect-ratio: 1 / 1 !important;
+      object-fit: contain !important;
+      display: block;
+      margin: 0 auto !important;
+      flex-shrink: 0 !important;
+    }
+
     @media print {
-      body * { visibility: hidden; }
-      #qr-print-container, #qr-print-container * { visibility: visible; }
-      #qr-print-container { position: absolute; left: 0; top: 0; width: 100%; display: grid !important; grid-template-columns: repeat(2, 1fr) !important; }
-      .no-print { display: none !important; }
+      @page {
+        size: letter portrait;
+        margin: 8mm 8mm 8mm 8mm;
+      }
+      *, *::before, *::after {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      html, body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        height: auto !important;
+        min-height: auto !important;
+        overflow: visible !important;
+      }
+      body * {
+        visibility: hidden;
+      }
+      header, nav, main, footer, .no-print {
+        display: none !important;
+      }
+      #modal-qrs {
+        position: static !important;
+        display: block !important;
+        background: transparent !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+        inset: auto !important;
+        box-shadow: none !important;
+        border: none !important;
+      }
+      #modal-qrs > div {
+        position: static !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        max-height: none !important;
+        height: auto !important;
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: visible !important;
+        background: transparent !important;
+      }
+      #modal-qrs div.overflow-y-auto {
+        overflow: visible !important;
+        height: auto !important;
+        max-height: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      #qr-print-container, #qr-print-container * {
+        visibility: visible !important;
+      }
+      #qr-print-container {
+        position: static !important;
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        align-items: start !important;
+        align-content: start !important;
+        gap: 12px !important;
+        width: 100% !important;
+        height: auto !important;
+        overflow: visible !important;
+        margin: 0 auto !important;
+        padding: 0 !important;
+      }
+      .qr-card-item {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+        page-break-after: auto;
+        box-sizing: border-box !important;
+        overflow: visible !important;
+        box-shadow: none !important;
+        border: 2px solid #cbd5e1 !important;
+        border-radius: 12px !important;
+        padding: 10px 8px !important;
+        background-color: #ffffff !important;
+        margin-bottom: 6px !important;
+        height: auto !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+      }
+      .qr-card-item.border-emerald-300,
+      .qr-card-item.border-2.border-emerald-300 {
+        border-color: #059669 !important;
+      }
+      .qr-card-item.border-amber-300,
+      .qr-card-item.border-2.border-amber-300 {
+        border-color: #d97706 !important;
+      }
+      .qr-code-wrapper {
+        width: 140px !important;
+        height: 140px !important;
+        min-width: 140px !important;
+        min-height: 140px !important;
+        max-width: 140px !important;
+        max-height: 140px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin: 6px auto !important;
+        flex-shrink: 0 !important;
+        aspect-ratio: 1 / 1 !important;
+      }
+      .qr-code-wrapper canvas,
+      .qr-code-wrapper img {
+        width: 128px !important;
+        height: 128px !important;
+        min-width: 128px !important;
+        min-height: 128px !important;
+        max-width: 128px !important;
+        max-height: 128px !important;
+        aspect-ratio: 1 / 1 !important;
+        object-fit: contain !important;
+        display: block !important;
+        margin: 0 auto !important;
+        flex-shrink: 0 !important;
+      }
+      .qr-code-wrapper canvas[style*="none"] {
+        display: none !important;
+      }
+      .qr-code-wrapper img[style*="none"] {
+        display: none !important;
+      }
     }
   </style>
 </head>
@@ -1493,7 +1647,7 @@
         if (currentQrFilter === 'both' || currentQrFilter === 'asistencia') {
           totalQRsGenerados++;
           const cardAsist = document.createElement('div');
-          cardAsist.className = 'bg-white rounded-xl p-4 border-2 border-emerald-300 shadow-sm flex flex-col items-center text-center relative overflow-hidden transition hover:shadow-md';
+          cardAsist.className = 'bg-white rounded-xl p-4 border-2 border-emerald-300 shadow-sm flex flex-col items-center text-center relative transition hover:shadow-md qr-card-item';
           const qrIdAsist = `qr-canvas-asist-${idx}`;
 
           cardAsist.innerHTML = `
@@ -1503,8 +1657,8 @@
               </span>
               <span class="text-[10px] text-slate-400 font-semibold truncate">${materiaNombre}</span>
             </div>
-            <div id="${qrIdAsist}" class="p-2.5 bg-white rounded-xl border border-emerald-200 my-1 shadow-inner"></div>
-            <div class="font-extrabold text-xs text-slate-900 mt-2 px-1 text-center line-clamp-2">${st.nombre}</div>
+            <div id="${qrIdAsist}" class="qr-code-wrapper p-1.5 bg-white rounded-xl border border-emerald-200 my-1 shadow-inner flex items-center justify-center"></div>
+            <div class="font-extrabold text-xs text-slate-900 mt-1 px-1 text-center line-clamp-2">${st.nombre}</div>
             <div class="text-[11px] text-slate-600 font-mono font-bold mt-0.5">Cuenta: ${st.cuenta || '-'}</div>
             <div class="mt-2 pt-1.5 border-t border-emerald-100 w-full text-[10px] font-bold text-emerald-700 bg-emerald-50/80 rounded py-0.5">
               CÓDIGO EXCLUSIVO: ASISTENCIA
@@ -1531,7 +1685,7 @@
         if (currentQrFilter === 'both' || currentQrFilter === 'noticia') {
           totalQRsGenerados++;
           const cardNotic = document.createElement('div');
-          cardNotic.className = 'bg-white rounded-xl p-4 border-2 border-amber-300 shadow-sm flex flex-col items-center text-center relative overflow-hidden transition hover:shadow-md';
+          cardNotic.className = 'bg-white rounded-xl p-4 border-2 border-amber-300 shadow-sm flex flex-col items-center text-center relative transition hover:shadow-md qr-card-item';
           const qrIdNotic = `qr-canvas-notic-${idx}`;
 
           cardNotic.innerHTML = `
@@ -1541,7 +1695,7 @@
               </span>
               <span class="text-[10px] text-slate-400 font-semibold truncate">${materiaNombre}</span>
             </div>
-            <div id="${qrIdNotic}" class="p-2.5 bg-white rounded-xl border border-amber-200 my-1 shadow-inner"></div>
+            <div id="${qrIdNotic}" class="qr-code-wrapper p-1.5 bg-white rounded-xl border border-amber-200 my-1 shadow-inner flex items-center justify-center"></div>
             <div class="font-extrabold text-xs text-slate-900 mt-2 px-1 text-center line-clamp-2">${st.nombre}</div>
             <div class="text-[11px] text-slate-600 font-mono font-bold mt-0.5">Cuenta: ${st.cuenta || '-'}</div>
             <div class="mt-2 pt-1.5 border-t border-amber-100 w-full text-[10px] font-bold text-amber-800 bg-amber-50/80 rounded py-0.5">
