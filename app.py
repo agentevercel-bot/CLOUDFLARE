@@ -112,6 +112,24 @@ def get_target_sheet(wb, modo='asistencia'):
         return wb.worksheets[1] if len(wb.worksheets) > 1 else wb.active
 
 
+def obtener_o_crear_columna_fecha(ws_target, fecha):
+    """
+    Busca la columna correspondiente a la fecha en la fila 1.
+    Si no existe, la crea con el formato de encabezado correspondiente y ancho adecuado.
+    """
+    for col in range(3, ws_target.max_column + 1):
+        if str(ws_target.cell(row=1, column=col).value or '').strip() == str(fecha).strip():
+            return col
+
+    col_fecha = ws_target.max_column + 1
+    h_cell = ws_target.cell(row=1, column=col_fecha, value=str(fecha).strip())
+    h_cell.fill = PatternFill('solid', fgColor='2E75B6')
+    h_cell.font = FONT_HDR
+    h_cell.alignment = ALIGN_CENTER
+    ws_target.column_dimensions[get_column_letter(col_fecha)].width = 13
+    return col_fecha
+
+
 # ─── RUTAS PRINCIPALES ────────────────────────────────────────────────────────
 
 @app.route('/')
@@ -133,12 +151,11 @@ def get_materias():
 @app.route('/api/datos', methods=['GET'])
 def get_datos_materia():
     """
-    Carga los alumnos, fechas de clase y asistencias de la hoja objetivo (Hoja2 o Noticia).
+    Carga los alumnos, fechas de clase y asistencias de ambas hojas (Asistencia y Noticia).
     Descarga previamente de R2 si el archivo no existe en /tmp/.
     """
     materia_key = request.args.get('materia', 'optimizacion')
     fecha_filtro = request.args.get('fecha', get_fecha_hoy_str())
-    modo = request.args.get('modo', 'asistencia').lower().strip()
 
     path, filename = get_filepath(materia_key)
     if not path or not os.path.exists(path):
@@ -149,60 +166,103 @@ def get_datos_materia():
     except Exception as e:
         return jsonify({'ok': False, 'error': f"Error al abrir Excel: {str(e)}"}), 500
 
-    ws_target = get_target_sheet(wb, modo)
+    ws_asist = get_target_sheet(wb, 'asistencia')
+    ws_notic = get_target_sheet(wb, 'noticia')
     
     headers = []
-    col_fecha_target = -1
+    col_fecha_asist = -1
 
-    for col in range(1, ws_target.max_column + 1):
-        val = ws_target.cell(row=1, column=col).value
+    for col in range(1, ws_asist.max_column + 1):
+        val = ws_asist.cell(row=1, column=col).value
         str_val = str(val).strip() if val is not None else ''
         headers.append(str_val)
         if col > 2 and str_val == fecha_filtro:
-            col_fecha_target = col
+            col_fecha_asist = col
+
+    col_fecha_notic = -1
+    for col in range(1, ws_notic.max_column + 1):
+        val = ws_notic.cell(row=1, column=col).value
+        str_val = str(val).strip() if val is not None else ''
+        if col > 2 and str_val == fecha_filtro:
+            col_fecha_notic = col
 
     fechas_clase = [h for h in headers[2:] if h]
 
+    # Mapeo rápido de noticia por número de cuenta
+    noticia_map = {}
+    if col_fecha_notic != -1:
+        for r in range(2, ws_notic.max_row + 1):
+            c_raw = str(ws_notic.cell(row=r, column=1).value or '').split('.')[0].strip()
+            v_raw = ws_notic.cell(row=r, column=col_fecha_notic).value
+            if c_raw:
+                noticia_map[c_raw] = v_raw
+
     students = []
-    presentes_count = 0
-    ausentes_count = 0
+    asist_presentes = 0
+    asist_ausentes = 0
+    notic_presentes = 0
+    notic_ausentes = 0
     pendientes_count = 0
 
-    for r in range(2, ws_target.max_row + 1):
-        cuenta = ws_target.cell(row=r, column=1).value
-        nombre = ws_target.cell(row=r, column=2).value
+    for r in range(2, ws_asist.max_row + 1):
+        cuenta = ws_asist.cell(row=r, column=1).value
+        nombre = ws_asist.cell(row=r, column=2).value
         if not cuenta and not nombre:
             continue
 
         cuenta_str = str(cuenta).split('.')[0].strip() if cuenta is not None else ''
         nombre_str = str(nombre).strip() if nombre is not None else ''
 
-        val_hoy = None
-        status = 'pending'
-        if col_fecha_target != -1:
-            raw_v = ws_target.cell(row=r, column=col_fecha_target).value
+        # Asistencia
+        val_asist = None
+        status_asist = 'pending'
+        if col_fecha_asist != -1:
+            raw_v = ws_asist.cell(row=r, column=col_fecha_asist).value
             if raw_v is not None and str(raw_v).strip() != '':
                 try:
                     val_num = int(float(raw_v))
-                    val_hoy = val_num
+                    val_asist = val_num
                     if val_num == 1:
-                        status = 'present'
-                        presentes_count += 1
+                        status_asist = 'present'
+                        asist_presentes += 1
                     elif val_num == 0:
-                        status = 'absent'
-                        ausentes_count += 1
+                        status_asist = 'absent'
+                        asist_ausentes += 1
                 except:
                     pass
 
-        if status == 'pending':
+        # Noticia
+        val_notic = None
+        status_notic = 'pending'
+        if cuenta_str in noticia_map:
+            raw_n = noticia_map[cuenta_str]
+            if raw_n is not None and str(raw_n).strip() != '':
+                try:
+                    val_n_num = int(float(raw_n))
+                    val_notic = val_n_num
+                    if val_n_num == 1:
+                        status_notic = 'present'
+                        notic_presentes += 1
+                    elif val_n_num == 0:
+                        status_notic = 'absent'
+                        notic_ausentes += 1
+                except:
+                    pass
+
+        if status_asist == 'pending' and status_notic == 'pending':
             pendientes_count += 1
 
         students.append({
             'row': r,
             'cuenta': cuenta_str,
             'nombre': nombre_str,
-            'status': status,
-            'val_hoy': val_hoy
+            'status_asistencia': status_asist,
+            'val_asistencia': val_asist,
+            'status_noticia': status_notic,
+            'val_noticia': val_notic,
+            # Compatibilidad
+            'status': status_asist,
+            'val_hoy': val_asist
         })
 
     wb.close()
@@ -211,13 +271,17 @@ def get_datos_materia():
         'ok': True,
         'materia': MATERIAS[materia_key],
         'fecha': fecha_filtro,
-        'modo': modo,
-        'col_fecha_encontrada': col_fecha_target != -1,
+        'col_fecha_encontrada': col_fecha_asist != -1,
         'fechas_disponibles': fechas_clase,
         'total_alumnos': len(students),
-        'presentes': presentes_count,
-        'ausentes': ausentes_count,
+        'asistencia_presentes': asist_presentes,
+        'asistencia_ausentes': asist_ausentes,
+        'noticia_presentes': notic_presentes,
+        'noticia_ausentes': notic_ausentes,
         'pendientes': pendientes_count,
+        # Compatibilidad retroactiva
+        'presentes': asist_presentes,
+        'ausentes': asist_ausentes,
         'students': students
     })
 
@@ -225,14 +289,16 @@ def get_datos_materia():
 @app.route('/api/scan', methods=['POST'])
 def registrar_escaneo_qr():
     """
-    Procesa un escaneo de QR (o ID/nombre), marca 1 en la fecha indicada en la hoja activa (Hoja2 o Noticia)
-    y sincroniza con Cloudflare R2.
+    Procesa un escaneo de QR (o ID/nombre).
+    Detecta si el QR declara específicamente si es de 'ASISTENCIA' o de 'NOTICIA',
+    identifica al alumno (cuenta y nombre), marca 1 en la fecha indicada en la hoja
+    correspondiente (Hoja2 para asistencia, Noticia para noticia) y sincroniza con Cloudflare R2.
     """
     data = request.get_json() or {}
     materia_key = data.get('materia', 'optimizacion')
     qr_data = str(data.get('qr_data', '')).strip()
-    fecha = data.get('fecha', get_fecha_hoy_str()).strip()
-    modo = data.get('modo', 'asistencia').lower().strip()
+    fecha = str(data.get('fecha', get_fecha_hoy_str())).strip()
+    modo_solicitado = data.get('modo', 'asistencia').lower().strip()
 
     if not qr_data:
         return jsonify({'ok': False, 'error': 'Datos de QR vacíos.'}), 400
@@ -241,28 +307,33 @@ def registrar_escaneo_qr():
     if not path or not os.path.exists(path):
         return jsonify({'ok': False, 'error': 'Archivo no encontrado.'}), 404
 
-    partes = qr_data.split('|')
-    cuenta_buscada = partes[0].strip()
-    nombre_buscado = partes[1].strip() if len(partes) > 1 else ''
+    # Analizar si el QR declara el tipo: "ASISTENCIA|cuenta|nombre" o "NOTICIA|cuenta|nombre"
+    partes = [p.strip() for p in qr_data.split('|')]
+    tipo_declarado = None
+    cuenta_buscada = ''
+    nombre_buscado = ''
+
+    if partes and partes[0].upper() in ['ASISTENCIA', 'NOTICIA']:
+        tipo_declarado = partes[0].lower()
+        cuenta_buscada = partes[1] if len(partes) > 1 else ''
+        nombre_buscado = partes[2] if len(partes) > 2 else ''
+    elif len(partes) > 2 and partes[2].upper() in ['ASISTENCIA', 'NOTICIA']:
+        tipo_declarado = partes[2].lower()
+        cuenta_buscada = partes[0]
+        nombre_buscado = partes[1]
+    else:
+        # Formato clásico o fallback: cuenta|nombre
+        cuenta_buscada = partes[0] if len(partes) > 0 else ''
+        nombre_buscado = partes[1] if len(partes) > 1 else ''
+
+    # El modo de registro se determina por el tipo declarado en el QR si existe, o el modo actual
+    modo_final = tipo_declarado if tipo_declarado else modo_solicitado
 
     wb = openpyxl.load_workbook(path)
-    ws_target = get_target_sheet(wb, modo)
+    ws_target = get_target_sheet(wb, modo_final)
 
-    # Buscar columna de fecha
-    col_fecha = -1
-    for col in range(3, ws_target.max_column + 1):
-        if str(ws_target.cell(row=1, column=col).value).strip() == fecha:
-            col_fecha = col
-            break
-
-    # Si la fecha no existe, crear la columna al final
-    if col_fecha == -1:
-        col_fecha = ws_target.max_column + 1
-        h_cell = ws_target.cell(row=1, column=col_fecha, value=fecha)
-        h_cell.fill = PatternFill('solid', fgColor='2E75B6')
-        h_cell.font = FONT_HDR
-        h_cell.alignment = ALIGN_CENTER
-        ws_target.column_dimensions[get_column_letter(col_fecha)].width = 13
+    # Garantizar que la columna de la fecha exista aunque sea un día fuera del rol
+    col_fecha = obtener_o_crear_columna_fecha(ws_target, fecha)
 
     alumno_encontrado = None
     row_encontrada = -1
@@ -279,16 +350,16 @@ def registrar_escaneo_qr():
             alumno_encontrado = {'cuenta': c_val, 'nombre': n_val}
             row_encontrada = r
             break
-        elif qr_data.lower() in n_val.lower() or qr_data == c_val:
+        elif (not cuenta_buscada and not nombre_buscado) and (qr_data.lower() in n_val.lower() or qr_data == c_val):
             alumno_encontrado = {'cuenta': c_val, 'nombre': n_val}
             row_encontrada = r
             break
 
     if not alumno_encontrado:
         wb.close()
-        return jsonify({'ok': False, 'error': f"Alumno no encontrado en la lista ({qr_data})"}), 404
+        return jsonify({'ok': False, 'error': f"Alumno no encontrado en la lista ({cuenta_buscada or nombre_buscado or qr_data})"}), 404
 
-    # Escribir 1 (Presente / Cumplió)
+    # Escribir 1 (Presente / Entregó)
     cell = ws_target.cell(row=row_encontrada, column=col_fecha, value=1)
     cell.fill = FILL_GREEN
     cell.font = FONT_GREEN
@@ -300,9 +371,12 @@ def registrar_escaneo_qr():
     if not ok:
         return jsonify({'ok': False, 'error': err}), 500
 
+    nombre_hoja = "Noticia" if modo_final == "noticia" else "Asistencia"
     return jsonify({
         'ok': True,
-        'mensaje': f"Registrado para {alumno_encontrado['nombre']} en {modo.capitalize()}",
+        'modo': modo_final,
+        'tipo_qr': tipo_declarado,
+        'mensaje': f"Registrado para {alumno_encontrado['nombre']} en {nombre_hoja}",
         'alumno': alumno_encontrado
     })
 
@@ -311,7 +385,7 @@ def registrar_escaneo_qr():
 def marcar_asistencia_manual():
     """
     Marca un estado manual (1, 0, o vacío) para un alumno en una fecha dada en la hoja activa
-    y sincroniza con Cloudflare R2.
+    y sincroniza con Cloudflare R2. Si la columna de la fecha no existe, la crea.
     """
     data = request.get_json() or {}
     materia_key = data.get('materia', 'optimizacion')
@@ -327,15 +401,8 @@ def marcar_asistencia_manual():
     wb = openpyxl.load_workbook(path)
     ws_target = get_target_sheet(wb, modo)
 
-    col_fecha = -1
-    for col in range(3, ws_target.max_column + 1):
-        if str(ws_target.cell(row=1, column=col).value).strip() == fecha:
-            col_fecha = col
-            break
-
-    if col_fecha == -1:
-        wb.close()
-        return jsonify({'ok': False, 'error': f"Fecha '{fecha}' no encontrada en el Excel."}), 404
+    # Asegura o crea la columna de la fecha
+    col_fecha = obtener_o_crear_columna_fecha(ws_target, fecha)
 
     target_row = -1
     for r in range(2, ws_target.max_row + 1):
@@ -377,7 +444,7 @@ def marcar_asistencia_manual():
 def finalizar_clase():
     """
     Rellena todas las celdas vacías del día con 0 (Ausente) en la hoja activa
-    y sincroniza con Cloudflare R2.
+    y sincroniza con Cloudflare R2. Si la columna de la fecha no existe, la crea.
     """
     data = request.get_json() or {}
     materia_key = data.get('materia', 'optimizacion')
@@ -391,15 +458,8 @@ def finalizar_clase():
     wb = openpyxl.load_workbook(path)
     ws_target = get_target_sheet(wb, modo)
 
-    col_fecha = -1
-    for col in range(3, ws_target.max_column + 1):
-        if str(ws_target.cell(row=1, column=col).value).strip() == fecha:
-            col_fecha = col
-            break
-
-    if col_fecha == -1:
-        wb.close()
-        return jsonify({'ok': False, 'error': f"Fecha '{fecha}' no encontrada en el Excel."}), 404
+    # Asegura o crea la columna de la fecha
+    col_fecha = obtener_o_crear_columna_fecha(ws_target, fecha)
 
     presentes = 0
     ausentes_rellenados = 0

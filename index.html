@@ -129,31 +129,14 @@
   <!-- CONTENEDOR PRINCIPAL -->
   <main class="max-w-7xl mx-auto w-full px-4 py-6 flex-1 flex flex-col gap-6">
 
-    <!-- SELECTORES PRINCIPALES: MODO Y MATERIA -->
+    <!-- SELECTOR DE MATERIA Y BANNER DETECCIÓN AUTOMÁTICA -->
     <section class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
         
-        <!-- 1. SELECTOR DE MODO -->
-        <div>
+        <!-- 1. SELECTOR DE MATERIA (7 cols) -->
+        <div class="md:col-span-7">
           <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-            1. Selecciona el Modo
-          </label>
-          <div class="grid grid-cols-2 gap-3">
-            <button type="button" data-mode="asistencia" class="mode-btn active-mode flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl border-2 font-bold text-sm bg-brand-500 text-white border-brand-500 shadow-sm transition-all duration-150">
-              <i class="fa-solid fa-clipboard-user text-lg"></i>
-              <span>Asistencia</span>
-            </button>
-            <button type="button" data-mode="noticia" class="mode-btn inactive-mode flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl border-2 font-bold text-sm bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 transition-all duration-150">
-              <i class="fa-solid fa-newspaper text-lg"></i>
-              <span>Noticia</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- 2. SELECTOR DE MATERIA -->
-        <div>
-          <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-            2. Selecciona la Materia
+            Selecciona la Materia
           </label>
           <div class="grid grid-cols-3 gap-2">
             <button type="button" data-subj="optimizacion" class="subj-btn active-subj flex flex-col items-center justify-center p-2.5 rounded-xl border-2 text-center bg-brand-50 border-brand-500 text-brand-700 shadow-sm transition-all duration-150">
@@ -171,9 +154,25 @@
           </div>
         </div>
 
+        <!-- 2. DETECCIÓN AUTOMÁTICA QR (5 cols) -->
+        <div class="md:col-span-5 bg-gradient-to-r from-emerald-50 via-teal-50 to-amber-50 border border-emerald-200 rounded-xl p-3.5 flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-white shadow-xs border border-emerald-200 flex items-center justify-center text-lg text-emerald-600 shrink-0">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+          </div>
+          <div class="text-xs">
+            <div class="font-bold text-slate-800 flex items-center gap-2">
+              <span>Detección Automática QR</span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-600 text-white uppercase tracking-wider">Activo</span>
+            </div>
+            <p class="text-slate-600 text-[11px] mt-0.5 leading-snug">
+              El escáner detecta si el QR es de <strong>Asistencia</strong> o de <strong>Noticia</strong> y actualiza la columna correspondiente.
+            </p>
+          </div>
+        </div>
+
       </div>
 
-      <!-- ESTADO DEL ARCHIVO VINCULADO & SELECTOR DE FECHAS DE MARTES/JUEVES -->
+      <!-- ESTADO DEL ARCHIVO VINCULADO & SELECTOR DE FECHAS -->
       <div class="mt-4 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs">
         <div class="flex items-center gap-2 text-slate-600">
           <i class="fa-regular fa-file-excel text-emerald-600 text-sm"></i>
@@ -183,16 +182,16 @@
 
         <div class="text-slate-600 flex items-center gap-2">
           <i class="fa-regular fa-calendar-days text-brand-500"></i>
-          <span class="font-semibold">Fecha de Clase (Martes y Jueves):</span>
+          <span class="font-semibold">Fecha de Clase:</span>
           <select id="select-class-date" class="px-2.5 py-1 rounded-md border border-slate-300 text-xs font-bold text-brand-700 bg-white focus:outline-none focus:border-brand-500">
-            <!-- Rellenado dinámicamente con todos los martes y jueves desde 04/08/2026 -->
+            <!-- Rellenado dinámicamente -->
           </select>
         </div>
       </div>
     </section>
 
-    <!-- ==================== VISTA: MODO ASISTENCIA ==================== -->
-    <div id="view-asistencia" class="flex flex-col gap-6">
+    <!-- PANEL PRINCIPAL: CÁMARA Y MÉTRICAS -->
+    <div class="flex flex-col gap-6">
 
       <!-- PANEL DIVIDIDO: CÁMARA ESCÁNER Y ESTADÍSTICAS -->
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -237,14 +236,13 @@
           <!-- Mensajes de feedback del escáner -->
           <div id="scan-feedback" class="mt-3 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-center text-slate-600 flex items-center justify-center gap-2">
             <i class="fa-solid fa-qrcode text-slate-400"></i>
-            <span>Apunta la cámara al QR del alumno para registrar automáticamente (1).</span>
+            <span>Apunta la cámara al QR de Asistencia o de Noticia del alumno para registrar automáticamente (1).</span>
           </div>
         </div>
 
         <!-- PANEL DE ESTADÍSTICAS Y ACCIONES (7 cols) -->
         <div class="lg:col-span-7 flex flex-col gap-4">
           
-          <!-- TARJETAS DE MÉTRICAS -->
           <!-- TARJETAS DE MÉTRICAS -->
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 text-center">
@@ -253,38 +251,41 @@
               <div class="text-[11px] text-slate-500 mt-0.5">Alumnos en lista</div>
             </div>
             <div class="bg-white rounded-2xl p-4 shadow-sm border border-emerald-200 text-center bg-emerald-50/40">
-              <div class="text-xs font-semibold text-emerald-700 uppercase tracking-wider" id="stat-label-presentes">Presentes (1)</div>
-              <div class="text-3xl font-extrabold text-emerald-600 mt-1" id="stat-presentes">0</div>
-              <div class="text-[11px] text-emerald-700 mt-0.5" id="stat-sublabel-presentes">Registrados hoy</div>
-            </div>
-            <div class="bg-white rounded-2xl p-4 shadow-sm border border-rose-200 text-center bg-rose-50/40">
-              <div class="text-xs font-semibold text-rose-700 uppercase tracking-wider" id="stat-label-ausentes">Ausentes (0)</div>
-              <div class="text-3xl font-extrabold text-rose-600 mt-1" id="stat-ausentes">0</div>
-              <div class="text-[11px] text-rose-700 mt-0.5" id="stat-sublabel-ausentes">Faltas</div>
+              <div class="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Asistencias (1)</div>
+              <div class="text-3xl font-extrabold text-emerald-600 mt-1" id="stat-asistencias">0</div>
+              <div class="text-[11px] text-emerald-700 mt-0.5">Presentes hoy</div>
             </div>
             <div class="bg-white rounded-2xl p-4 shadow-sm border border-amber-200 text-center bg-amber-50/40">
-              <div class="text-xs font-semibold text-amber-700 uppercase tracking-wider">Pendientes</div>
-              <div class="text-3xl font-extrabold text-amber-600 mt-1" id="stat-pendientes">0</div>
-              <div class="text-[11px] text-amber-700 mt-0.5">Sin calificar / marcar</div>
+              <div class="text-xs font-semibold text-amber-700 uppercase tracking-wider">Noticias (1)</div>
+              <div class="text-3xl font-extrabold text-amber-600 mt-1" id="stat-noticias">0</div>
+              <div class="text-[11px] text-amber-700 mt-0.5">Entregadas hoy</div>
+            </div>
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 text-center bg-slate-50/60">
+              <div class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Pendientes</div>
+              <div class="text-3xl font-extrabold text-slate-700 mt-1" id="stat-pendientes">0</div>
+              <div class="text-[11px] text-slate-500 mt-0.5">Sin registrar</div>
             </div>
           </div>
 
           <!-- BOTONES DE ACCIÓN PRINCIPALES -->
           <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-3">
             <div class="flex items-center gap-2 flex-wrap">
-              <button id="btn-finalizar-clase" class="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs tracking-wide transition shadow hover:shadow-md flex items-center gap-2">
-                <i class="fa-solid fa-flag-checkered"></i>
-                <span id="btn-finalizar-texto">Finalizar Clase (Rellenar Ausencias con 0)</span>
+              <button id="btn-finalizar-asistencia" class="px-3.5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs tracking-wide transition shadow hover:shadow-md flex items-center gap-1.5" title="Pone 0 en Asistencia a todos los alumnos sin marcar">
+                <i class="fa-solid fa-user-xmark"></i>
+                <span>Finalizar Asistencia (0)</span>
               </button>
-              <button id="btn-marcar-todos-presentes" class="px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition border border-slate-300 flex items-center gap-1.5">
-                <i class="fa-solid fa-check-double text-emerald-600"></i>
-                <span id="btn-todos-texto">Todos Presentes</span>
+              <button id="btn-finalizar-noticia" class="px-3.5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs tracking-wide transition shadow hover:shadow-md flex items-center gap-1.5" title="Pone 0 en Noticia a todos los alumnos sin marcar">
+                <i class="fa-solid fa-file-circle-xmark"></i>
+                <span>Finalizar Noticia (0)</span>
               </button>
             </div>
 
             <div class="flex items-center gap-2">
               <button id="btn-ver-qrs" class="px-3.5 py-2.5 rounded-xl bg-brand-50 hover:bg-brand-100 text-brand-700 font-semibold text-xs transition border border-brand-200 flex items-center gap-1.5">
                 <i class="fa-solid fa-qrcode text-brand-500"></i> Ver / Imprimir QRs
+              </button>
+              <button id="btn-abrir-modal-noticia" class="px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition border border-slate-300 flex items-center gap-1.5" title="Publicar aviso general en Excel">
+                <i class="fa-solid fa-bullhorn text-brand-600"></i> Publicar Aviso
               </button>
             </div>
           </div>
@@ -298,9 +299,9 @@
             <div class="flex items-center gap-1 text-xs">
               <span class="text-slate-400">Filtrar:</span>
               <button data-filter="all" class="filter-btn px-2.5 py-1 rounded-md bg-slate-200 font-bold text-slate-800 text-[11px]">Todos</button>
+              <button data-filter="asist_present" class="filter-btn px-2.5 py-1 rounded-md hover:bg-slate-100 text-slate-600 text-[11px]">Con Asistencia</button>
+              <button data-filter="notic_present" class="filter-btn px-2.5 py-1 rounded-md hover:bg-slate-100 text-slate-600 text-[11px]">Con Noticia</button>
               <button data-filter="pending" class="filter-btn px-2.5 py-1 rounded-md hover:bg-slate-100 text-slate-600 text-[11px]">Pendientes</button>
-              <button data-filter="present" class="filter-btn px-2.5 py-1 rounded-md hover:bg-slate-100 text-slate-600 text-[11px]" id="filter-btn-present">Presentes</button>
-              <button data-filter="absent" class="filter-btn px-2.5 py-1 rounded-md hover:bg-slate-100 text-slate-600 text-[11px]" id="filter-btn-absent">No Entregó</button>
             </div>
           </div>
 
@@ -308,28 +309,32 @@
 
       </div>
 
-      <!-- LISTA TABULAR DE ALUMNOS (HOJA 2 / NOTICIA) -->
+      <!-- LISTA TABULAR DE ALUMNOS (ASISTENCIA Y NOTICIA EN UNA SOLA VISTA) -->
       <section class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
           <div>
             <h3 class="font-bold text-sm text-slate-800 flex items-center gap-2">
               <i class="fa-solid fa-table-list text-brand-500"></i>
-              Lista de Alumnos (<span id="table-sheet-title" class="text-brand-600">Hoja 2 Asistencia</span>) - <span id="label-materia-activa" class="text-brand-600 font-extrabold">Optimización</span>
+              Lista de Alumnos - <span id="label-materia-activa" class="text-brand-600 font-extrabold">Optimización</span>
             </h3>
-            <p class="text-xs text-slate-400" id="table-sheet-subtitle">Haz clic en 1 o 0 para modificar manualmente, o escanea el QR con la cámara.</p>
+            <p class="text-xs text-slate-400">Asistencia y Noticia se registran automáticamente por QR o con los botones manuales (1 y 0).</p>
           </div>
-          <span class="text-xs text-slate-500">Columna activa: <strong id="label-fecha-col" class="text-brand-700">08/09/2026</strong></span>
+          <span class="text-xs text-slate-500">Columna de fecha: <strong id="label-fecha-col" class="text-brand-700">08/09/2026</strong></span>
         </div>
 
         <div class="overflow-x-auto">
           <table class="w-full text-left border-collapse text-xs">
             <thead>
               <tr class="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200">
-                <th class="py-3 px-4 w-12 text-center">#</th>
-                <th class="py-3 px-4 w-28">Cuenta</th>
+                <th class="py-3 px-3 w-12 text-center">#</th>
+                <th class="py-3 px-3 w-28">Cuenta</th>
                 <th class="py-3 px-4">Nombre del Alumno</th>
-                <th class="py-3 px-4 w-40 text-center" id="th-estado-col">Estado en Fecha</th>
-                <th class="py-3 px-4 w-44 text-center">Acciones</th>
+                <th class="py-3 px-3 w-56 text-center bg-emerald-50/50 border-x border-emerald-100 text-emerald-800 font-bold">
+                  <i class="fa-solid fa-calendar-check text-emerald-600 mr-1"></i> Asistencia (Hoja 2)
+                </th>
+                <th class="py-3 px-3 w-56 text-center bg-amber-50/50 border-r border-amber-100 text-amber-800 font-bold">
+                  <i class="fa-solid fa-newspaper text-amber-600 mr-1"></i> Noticia (Hoja Noticia)
+                </th>
               </tr>
             </thead>
             <tbody id="student-table-body" class="divide-y divide-slate-100">
@@ -439,7 +444,7 @@
           <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
             <i class="fa-solid fa-qrcode text-brand-500"></i> Códigos QR de Alumnos
           </h3>
-          <p class="text-xs text-slate-500">Imprime o muestra estos códigos para que los alumnos puedan ser escaneados con la cámara.</p>
+          <p class="text-xs text-slate-500">2 códigos QR por alumno: Asistencia y Noticia debidamente rotulados y especificados.</p>
         </div>
         <div class="flex items-center gap-2">
           <button onclick="window.print()" class="px-3.5 py-1.5 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold flex items-center gap-1.5 shadow">
@@ -448,6 +453,25 @@
           <button id="btn-cerrar-modal-qrs" class="text-slate-400 hover:text-slate-600 text-xl px-2">
             <i class="fa-solid fa-xmark"></i>
           </button>
+        </div>
+      </div>
+
+      <!-- Filtros de visualización de QRs -->
+      <div class="px-4 py-2.5 bg-slate-100 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 no-print">
+        <div class="flex items-center gap-1.5 text-xs">
+          <span class="text-slate-500 font-semibold mr-1">Mostrar:</span>
+          <button type="button" id="btn-qr-filter-both" class="px-3 py-1 rounded-lg text-xs font-bold bg-brand-500 text-white shadow-xs transition">
+            <i class="fa-solid fa-layer-group mr-1"></i> Ambos (2 QR por alumno)
+          </button>
+          <button type="button" id="btn-qr-filter-asistencia" class="px-3 py-1 rounded-lg text-xs font-semibold bg-white text-slate-700 hover:bg-slate-200 border border-slate-300 transition">
+            <i class="fa-solid fa-calendar-check text-emerald-600 mr-1"></i> Solo Asistencia
+          </button>
+          <button type="button" id="btn-qr-filter-noticia" class="px-3 py-1 rounded-lg text-xs font-semibold bg-white text-slate-700 hover:bg-slate-200 border border-slate-300 transition">
+            <i class="fa-solid fa-newspaper text-amber-600 mr-1"></i> Solo Noticia
+          </button>
+        </div>
+        <div class="text-[11px] text-slate-500 font-medium">
+          <span id="qr-count-label">2 QR por alumno</span>
         </div>
       </div>
 
@@ -552,42 +576,59 @@
 
     function setupClassDateDropdown() {
       APP_STATE.classDates = generarFechasMartesJueves();
-      const select = document.getElementById('select-class-date');
-      select.innerHTML = '';
 
-      // Determinar la fecha más cercana a hoy si coincide con un martes o jueves
+      // Fecha real del día en que se ejecuta el programa
       const now = new Date();
       const dd = String(now.getDate()).padStart(2, '0');
       const mm = String(now.getMonth() + 1).padStart(2, '0');
       const yyyy = now.getFullYear();
       const realToday = `${dd}/${mm}/${yyyy}`;
 
-      let selectedDate = APP_STATE.classDates.includes(realToday) ? realToday : '08/09/2026';
+      // Asegurar que la fecha de hoy esté disponible en el listado aunque no sea martes ni jueves
+      if (!APP_STATE.classDates.includes(realToday)) {
+        APP_STATE.classDates.push(realToday);
+        APP_STATE.classDates.sort((a, b) => {
+          const [d1, m1, y1] = a.split('/').map(Number);
+          const [d2, m2, y2] = b.split('/').map(Number);
+          return new Date(y1, m1 - 1, d1) - new Date(y2, m2 - 1, d2);
+        });
+      }
+
+      // La fecha activa siempre es la del día en que se ejecuta el programa
+      const selectedDate = realToday;
       APP_STATE.todayDateStr = selectedDate;
+
+      const select = document.getElementById('select-class-date');
+      select.innerHTML = '';
 
       APP_STATE.classDates.forEach(d => {
         const opt = document.createElement('option');
         opt.value = d;
-        opt.textContent = `${d} (${obtenerDiaSemanaStr(d)})`;
+        const diaNombre = obtenerDiaSemanaStr(d);
+        const esHoy = (d === realToday);
+        opt.textContent = esHoy ? `${d} (HOY - ${diaNombre})` : `${d} (${diaNombre})`;
         if (d === selectedDate) opt.selected = true;
         select.appendChild(opt);
       });
 
       document.getElementById('label-fecha-col').textContent = selectedDate;
-      document.getElementById('noticia-fecha').value = selectedDate;
+      const nF = document.getElementById('noticia-fecha');
+      if (nF) nF.value = selectedDate;
 
       select.addEventListener('change', async (e) => {
         APP_STATE.todayDateStr = e.target.value;
         document.getElementById('label-fecha-col').textContent = APP_STATE.todayDateStr;
-        document.getElementById('noticia-fecha').value = APP_STATE.todayDateStr;
+        const notF = document.getElementById('noticia-fecha');
+        if (notF) notF.value = APP_STATE.todayDateStr;
         await cargarDatosMateria();
       });
     }
 
     function obtenerDiaSemanaStr(fechaStr) {
-      const [dd, mm, yyyy] = fechaStr.split('/');
+      const [dd, mm, yyyy] = fechaStr.split('/').map(Number);
       const d = new Date(yyyy, mm - 1, dd);
-      return d.getDay() === 2 ? 'Martes' : 'Jueves';
+      const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+      return dias[d.getDay()] || '';
     }
 
     function highlightActiveSchedule() {
@@ -637,17 +678,16 @@
     async function cargarDatosMateria() {
       const conf = SUBJECT_CONFIG[APP_STATE.subject];
       document.getElementById('current-filename').textContent = conf.fileName;
-      const hojaLabel = APP_STATE.mode === 'noticia' ? 'Noticia' : 'Hoja 2 (Asistencia)';
-      document.getElementById('label-materia-activa').textContent = `${conf.name} [${hojaLabel}]`;
+      document.getElementById('label-materia-activa').textContent = conf.name;
 
       if (APP_STATE.serverConnected) {
         try {
-          const resp = await fetch(`/api/datos?materia=${APP_STATE.subject}&modo=${APP_STATE.mode}&fecha=${encodeURIComponent(APP_STATE.todayDateStr)}`);
+          const resp = await fetch(`/api/datos?materia=${APP_STATE.subject}&fecha=${encodeURIComponent(APP_STATE.todayDateStr)}`);
           const data = await resp.json();
           if (data.ok) {
             APP_STATE.students = data.students;
             renderStudentTable();
-            actualizarEstadisticas(data.total_alumnos, data.presentes, data.ausentes, data.pendientes);
+            actualizarEstadisticas(data.total_alumnos, data.asistencia_presentes, data.noticia_presentes, data.pendientes);
             return;
           }
         } catch (e) {
@@ -660,7 +700,6 @@
     }
 
     async function loadFallbackData() {
-      // Intentar cargar archivo estático si existe
       try {
         const conf = SUBJECT_CONFIG[APP_STATE.subject];
         const resp = await fetch(`archivos_excel/${conf.fileName}`);
@@ -676,82 +715,88 @@
         }
       } catch (_) {}
 
-      // Generar datos en memoria
       generateInMemoryFallback();
     }
 
     function generateInMemoryFallback() {
       const ROSTERS = {
         optimizacion: [
-          { cuenta: '2011505', nombre: 'DE LA CRUZ LOPEZ ALAN', status: 'pending' },
-          { cuenta: '2521564', nombre: 'ESQUIVEL ROSALES ANGEL MICHELLE', status: 'pending' },
-          { cuenta: '2521566', nombre: 'GONZALEZ DE LA CRUZ EDGAR', status: 'pending' },
-          { cuenta: '2113059', nombre: 'GUADARRAMA GARCIA ARIANA CRYSTAL', status: 'pending' },
-          { cuenta: '2421346', nombre: 'GUTIERREZ BECERRIL CARLOS LEONARDO', status: 'pending' },
-          { cuenta: '2521567', nombre: 'HERNANDEZ REYES RODRIGO SANTOS', status: 'pending' },
-          { cuenta: '2110647', nombre: 'MACEDO MIRANDA VANESSA MICHELLE', status: 'pending' },
-          { cuenta: '1210584', nombre: 'MEDINA JARAMILLO PAULINA', status: 'pending' },
-          { cuenta: '2520064', nombre: 'OLGUIN ALBARRAN ANDREA', status: 'pending' },
-          { cuenta: '2472431', nombre: 'PASTRANA SARANDINGUA DANIELA FERNANDA', status: 'pending' },
-          { cuenta: '2322588', nombre: 'REBOLLAR RUIZ LUIS FERNANDO', status: 'pending' },
-          { cuenta: '2521584', nombre: 'RENTERIA MORENO MARCO ANTONIO', status: 'pending' },
-          { cuenta: '2112372', nombre: 'ROMERO SANCHEZ ASHELY JULYETTE', status: 'pending' },
-          { cuenta: '2321033', nombre: 'SANCHEZ HERRERA URIEL', status: 'pending' },
-          { cuenta: '2215068', nombre: 'SEVERO SANCHEZ LEONARDO VALENTINO', status: 'pending' },
-          { cuenta: '2460889', nombre: 'SILVA ALBARRAN MICHELLE', status: 'pending' },
-          { cuenta: '2011201', nombre: 'VILLEDA GARCIA LUIS EDUARDO', status: 'pending' }
+          { cuenta: '2011505', nombre: 'DE LA CRUZ LOPEZ ALAN' },
+          { cuenta: '2521564', nombre: 'ESQUIVEL ROSALES ANGEL MICHELLE' },
+          { cuenta: '2521566', nombre: 'GONZALEZ DE LA CRUZ EDGAR' },
+          { cuenta: '2113059', nombre: 'GUADARRAMA GARCIA ARIANA CRYSTAL' },
+          { cuenta: '2421346', nombre: 'GUTIERREZ BECERRIL CARLOS LEONARDO' },
+          { cuenta: '2521567', nombre: 'HERNANDEZ REYES RODRIGO SANTOS' },
+          { cuenta: '2110647', nombre: 'MACEDO MIRANDA VANESSA MICHELLE' },
+          { cuenta: '1210584', nombre: 'MEDINA JARAMILLO PAULINA' },
+          { cuenta: '2520064', nombre: 'OLGUIN ALBARRAN ANDREA' },
+          { cuenta: '2472431', nombre: 'PASTRANA SARANDINGUA DANIELA FERNANDA' },
+          { cuenta: '2322588', nombre: 'REBOLLAR RUIZ LUIS FERNANDO' },
+          { cuenta: '2521584', nombre: 'RENTERIA MORENO MARCO ANTONIO' },
+          { cuenta: '2112372', nombre: 'ROMERO SANCHEZ ASHELY JULYETTE' },
+          { cuenta: '2321033', nombre: 'SANCHEZ HERRERA URIEL' },
+          { cuenta: '2215068', nombre: 'SEVERO SANCHEZ LEONARDO VALENTINO' },
+          { cuenta: '2460889', nombre: 'SILVA ALBARRAN MICHELLE' },
+          { cuenta: '2011201', nombre: 'VILLEDA GARCIA LUIS EDUARDO' }
         ],
         investigacion_operaciones: [
-          { cuenta: '2114398', nombre: 'ABASOLO DIAZ PAMELA CONCEPCION', status: 'pending' },
-          { cuenta: '2114488', nombre: 'AYLLON CARBAJAL VALERIA', status: 'pending' },
-          { cuenta: '2421019', nombre: 'CEDILLO ROSEL XIMENA', status: 'pending' },
-          { cuenta: '2421028', nombre: 'DIAZ ESTRADA TENDZIN ANGELLO', status: 'pending' },
-          { cuenta: '2421029', nombre: 'DIAZ MARTINEZ AARON DANIEL', status: 'pending' },
-          { cuenta: '2320980', nombre: 'DIAZ VERA JESUS EMMANUEL', status: 'pending' },
-          { cuenta: '1914149', nombre: 'FLORES FLORES JOB NATANAEL', status: 'pending' },
-          { cuenta: '2460212', nombre: 'FLORES LOPEZ AMERICA FERNANDA', status: 'pending' },
-          { cuenta: '2421034', nombre: 'GARCIA MONROY HECTOR JESUS', status: 'pending' },
-          { cuenta: '1940855', nombre: 'GAYTAN RANGEL RICARDO DAVID', status: 'pending' },
-          { cuenta: '2113066', nombre: 'GUERRERO PEDROZA LUIS FERNANDO', status: 'pending' },
-          { cuenta: '2421051', nombre: 'ISLAS CRUZ JOSE', status: 'pending' },
-          { cuenta: '2421064', nombre: 'MENDOZA MARTINEZ FRIDA ALEJANDRA', status: 'pending' },
-          { cuenta: '2421065', nombre: 'MORALES MEDINA YAEL', status: 'pending' },
-          { cuenta: '2114136', nombre: 'NABOR MATIAS KEVIN ALEJANDRO', status: 'pending' },
-          { cuenta: '2110918', nombre: 'REYES CARRO ANA CECILIA', status: 'pending' },
-          { cuenta: '2421079', nombre: 'RODRIGUEZ MONROY ARIEL', status: 'pending' },
-          { cuenta: '1913774', nombre: 'SALAS GUTIERREZ ALAN DANIEL', status: 'pending' },
-          { cuenta: '2421087', nombre: 'SANTANA REYES GABRIELL QUETZALLI', status: 'pending' },
-          { cuenta: '2421089', nombre: 'TOLEDO ESCAMILLA MELANY JOANA', status: 'pending' },
-          { cuenta: '2113614', nombre: 'TRINIDAD GARCIA DULCE MARIA', status: 'pending' },
-          { cuenta: '2112567', nombre: 'VIDAL MORALES JORGE URIEL', status: 'pending' },
-          { cuenta: '2111175', nombre: 'VILLANUEVA REYES YAEL', status: 'pending' }
+          { cuenta: '2114398', nombre: 'ABASOLO DIAZ PAMELA CONCEPCION' },
+          { cuenta: '2114488', nombre: 'AYLLON CARBAJAL VALERIA' },
+          { cuenta: '2421019', nombre: 'CEDILLO ROSEL XIMENA' },
+          { cuenta: '2421028', nombre: 'DIAZ ESTRADA TENDZIN ANGELLO' },
+          { cuenta: '2421029', nombre: 'DIAZ MARTINEZ AARON DANIEL' },
+          { cuenta: '2320980', nombre: 'DIAZ VERA JESUS EMMANUEL' },
+          { cuenta: '1914149', nombre: 'FLORES FLORES JOB NATANAEL' },
+          { cuenta: '2460212', nombre: 'FLORES LOPEZ AMERICA FERNANDA' },
+          { cuenta: '2421034', nombre: 'GARCIA MONROY HECTOR JESUS' },
+          { cuenta: '1940855', nombre: 'GAYTAN RANGEL RICARDO DAVID' },
+          { cuenta: '2113066', nombre: 'GUERRERO PEDROZA LUIS FERNANDO' },
+          { cuenta: '2421051', nombre: 'ISLAS CRUZ JOSE' },
+          { cuenta: '2421064', nombre: 'MENDOZA MARTINEZ FRIDA ALEJANDRA' },
+          { cuenta: '2421065', nombre: 'MORALES MEDINA YAEL' },
+          { cuenta: '2114136', nombre: 'NABOR MATIAS KEVIN ALEJANDRO' },
+          { cuenta: '2110918', nombre: 'REYES CARRO ANA CECILIA' },
+          { cuenta: '2421079', nombre: 'RODRIGUEZ MONROY ARIEL' },
+          { cuenta: '1913774', nombre: 'SALAS GUTIERREZ ALAN DANIEL' },
+          { cuenta: '2421087', nombre: 'SANTANA REYES GABRIELL QUETZALLI' },
+          { cuenta: '2421089', nombre: 'TOLEDO ESCAMILLA MELANY JOANA' },
+          { cuenta: '2113614', nombre: 'TRINIDAD GARCIA DULCE MARIA' },
+          { cuenta: '2112567', nombre: 'VIDAL MORALES JORGE URIEL' },
+          { cuenta: '2111175', nombre: 'VILLANUEVA REYES YAEL' }
         ],
         teoria_decision: [
-          { cuenta: '2421335', nombre: 'AGUSTIN ANTOLIN ROSA ARELI', status: 'pending' },
-          { cuenta: '1210043', nombre: 'ALCANTAR GUTIERREZ LUIS ANGEL', status: 'pending' },
-          { cuenta: '2112653', nombre: 'ALVAREZ AREVALO DAYAN MICHELLE', status: 'pending' },
-          { cuenta: '2421338', nombre: 'ARMAS OCAMPO SAMUEL', status: 'pending' },
-          { cuenta: '2421341', nombre: 'CARBAJAL LEON JOSE MARIA', status: 'pending' },
-          { cuenta: '2520053', nombre: 'CEJUDO SILVA ANYELO FABRICIO', status: 'pending' },
-          { cuenta: '2110225', nombre: 'COLIN PERDOMO EBANY ALEXANDER', status: 'pending' },
-          { cuenta: '2210227', nombre: 'CONTRERAS SALAZAR JESUS', status: 'pending' },
-          { cuenta: '1941041', nombre: 'GOMEZ DOMINGUEZ ALDO ALESSANDRO', status: 'pending' },
-          { cuenta: '2110650', nombre: 'MACIAS MORENO IRAN', status: 'pending' },
-          { cuenta: '2114924', nombre: 'MARTINEZ JIMENEZ JOSE JULIAN', status: 'pending' },
-          { cuenta: '2421352', nombre: 'MORENO GARCIA ALAN', status: 'pending' },
-          { cuenta: '2113343', nombre: 'OCHOA ROJAS JUAN CARLOS CHARBEL', status: 'pending' },
-          { cuenta: '2421355', nombre: 'RAMIREZ FLORES ITZEL', status: 'pending' },
-          { cuenta: '2010995', nombre: 'ROMERO MARTINEZ ANGEL EMILIANO', status: 'pending' },
-          { cuenta: '2142110', nombre: 'SANCHEZ MIDIEL MIGUEL ANGEL', status: 'pending' },
-          { cuenta: '2115211', nombre: 'SANCHEZ MONROY CESAR AUGUSTO', status: 'pending' },
-          { cuenta: '2421361', nombre: 'TORRES TEJAS ANGEL DE JESUS', status: 'pending' },
-          { cuenta: '2421362', nombre: 'TROCHE ALEJANDRO YEHOSHUA ASAF', status: 'pending' },
-          { cuenta: '1310979', nombre: 'VALDES DIAZ ALEXIS JESUS', status: 'pending' },
-          { cuenta: '2142880', nombre: 'VALDES LAZCANO LEONARDO', status: 'pending' },
-          { cuenta: '2421364', nombre: 'ZAMORA MEJIA ROBERTO ZAID', status: 'pending' }
+          { cuenta: '2421335', nombre: 'AGUSTIN ANTOLIN ROSA ARELI' },
+          { cuenta: '1210043', nombre: 'ALCANTAR GUTIERREZ LUIS ANGEL' },
+          { cuenta: '2112653', nombre: 'ALVAREZ AREVALO DAYAN MICHELLE' },
+          { cuenta: '2421338', nombre: 'ARMAS OCAMPO SAMUEL' },
+          { cuenta: '2421341', nombre: 'CARBAJAL LEON JOSE MARIA' },
+          { cuenta: '2520053', nombre: 'CEJUDO SILVA ANYELO FABRICIO' },
+          { cuenta: '2110225', nombre: 'COLIN PERDOMO EBANY ALEXANDER' },
+          { cuenta: '2210227', nombre: 'CONTRERAS SALAZAR JESUS' },
+          { cuenta: '1941041', nombre: 'GOMEZ DOMINGUEZ ALDO ALESSANDRO' },
+          { cuenta: '2110650', nombre: 'MACIAS MORENO IRAN' },
+          { cuenta: '2114924', nombre: 'MARTINEZ JIMENEZ JOSE JULIAN' },
+          { cuenta: '2421352', nombre: 'MORENO GARCIA ALAN' },
+          { cuenta: '2113343', nombre: 'OCHOA ROJAS JUAN CARLOS CHARBEL' },
+          { cuenta: '2421355', nombre: 'RAMIREZ FLORES ITZEL' },
+          { cuenta: '2010995', nombre: 'ROMERO MARTINEZ ANGEL EMILIANO' },
+          { cuenta: '2142110', nombre: 'SANCHEZ MIDIEL MIGUEL ANGEL' },
+          { cuenta: '2115211', nombre: 'SANCHEZ MONROY CESAR AUGUSTO' },
+          { cuenta: '2421361', nombre: 'TORRES TEJAS ANGEL DE JESUS' },
+          { cuenta: '2421362', nombre: 'TROCHE ALEJANDRO YEHOSHUA ASAF' },
+          { cuenta: '1310979', nombre: 'VALDES DIAZ ALEXIS JESUS' },
+          { cuenta: '2142880', nombre: 'VALDES LAZCANO LEONARDO' },
+          { cuenta: '2421364', nombre: 'ZAMORA MEJIA ROBERTO ZAID' }
         ]
       };
-      APP_STATE.students = ROSTERS[APP_STATE.subject] || ROSTERS.optimizacion;
+      const rawList = ROSTERS[APP_STATE.subject] || ROSTERS.optimizacion;
+      APP_STATE.students = rawList.map(s => ({
+        ...s,
+        status_asistencia: 'pending',
+        val_asistencia: null,
+        status_noticia: 'pending',
+        val_noticia: null
+      }));
       renderStudentTable();
       actualizarEstadisticas();
     }
@@ -759,29 +804,68 @@
     function parseHoja2Fallback() {
       const wb = APP_STATE.workbook;
       if (!wb) return;
-      const targetSheetName = APP_STATE.mode === 'noticia' ? 'Noticia' : 'Hoja2';
-      const ws = wb.Sheets[targetSheetName] || wb.Sheets['Hoja2'] || wb.Sheets[wb.SheetNames[1]];
-      if (!ws) return;
-      const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
-      if (!data || data.length < 2) return;
+      const wsAsist = wb.Sheets['Hoja2'] || wb.Sheets[wb.SheetNames[1]];
+      const wsNotic = wb.Sheets['Noticia'] || wb.Sheets['Noticias'];
+      if (!wsAsist) return;
 
-      const headers = data[0].map(h => String(h || '').trim());
-      const colTarget = headers.indexOf(APP_STATE.todayDateStr);
+      const dataAsist = XLSX.utils.sheet_to_json(wsAsist, { header: 1 });
+      if (!dataAsist || dataAsist.length < 2) return;
+
+      const headersAsist = (dataAsist[0] || []).map(h => String(h || '').trim());
+      const colAsist = headersAsist.indexOf(APP_STATE.todayDateStr);
+
+      const noticMap = {};
+      if (wsNotic) {
+        const dataNotic = XLSX.utils.sheet_to_json(wsNotic, { header: 1 });
+        if (dataNotic && dataNotic.length > 1) {
+          const headersNotic = (dataNotic[0] || []).map(h => String(h || '').trim());
+          const colNotic = headersNotic.indexOf(APP_STATE.todayDateStr);
+          if (colNotic !== -1) {
+            for (let r = 1; r < dataNotic.length; r++) {
+              const row = dataNotic[r];
+              if (row && row[0]) {
+                const c = String(row[0]).split('.')[0].trim();
+                noticMap[c] = String(row[colNotic] !== undefined ? row[colNotic] : '').trim();
+              }
+            }
+          }
+        }
+      }
 
       APP_STATE.students = [];
-      for (let r = 1; r < data.length; r++) {
-        const row = data[r];
+      for (let r = 1; r < dataAsist.length; r++) {
+        const row = dataAsist[r];
         if (!row || (!row[0] && !row[1])) continue;
         const cuenta = String(row[0] || '').split('.')[0].trim();
         const nombre = String(row[1] || '').trim();
-        let status = 'pending';
-        if (colTarget !== -1 && row[colTarget] !== undefined) {
-          const v = String(row[colTarget]).trim();
-          if (v === '1' || v === '1.0') status = 'present';
-          else if (v === '0' || v === '0.0') status = 'absent';
+
+        let statusAsist = 'pending';
+        let valAsist = null;
+        if (colAsist !== -1 && row[colAsist] !== undefined) {
+          const v = String(row[colAsist]).trim();
+          if (v === '1' || v === '1.0') { statusAsist = 'present'; valAsist = 1; }
+          else if (v === '0' || v === '0.0') { statusAsist = 'absent'; valAsist = 0; }
         }
-        APP_STATE.students.push({ cuenta, nombre, status, row: r });
+
+        let statusNotic = 'pending';
+        let valNotic = null;
+        if (cuenta in noticMap) {
+          const vn = noticMap[cuenta];
+          if (vn === '1' || vn === '1.0') { statusNotic = 'present'; valNotic = 1; }
+          else if (vn === '0' || vn === '0.0') { statusNotic = 'absent'; valNotic = 0; }
+        }
+
+        APP_STATE.students.push({
+          cuenta,
+          nombre,
+          status_asistencia: statusAsist,
+          val_asistencia: valAsist,
+          status_noticia: statusNotic,
+          val_noticia: valNotic,
+          row: r
+        });
       }
+      renderStudentTable();
       actualizarEstadisticas();
     }
 
@@ -789,11 +873,6 @@
        5. EVENT LISTENERS
        ------------------------------------------------------------- */
     function setupEventListeners() {
-      // Modo Asistencia vs Noticia
-      document.querySelectorAll('.mode-btn').forEach(btn => {
-        btn.addEventListener('click', () => setAppMode(btn.dataset.mode));
-      });
-
       // Materia
       document.querySelectorAll('.subj-btn').forEach(btn => {
         btn.addEventListener('click', () => setAppSubject(btn.dataset.subj));
@@ -826,15 +905,16 @@
       // Cámara
       document.getElementById('btn-toggle-cam').addEventListener('click', toggleCamera);
 
-      // Finalizar Clase
-      document.getElementById('btn-finalizar-clase').addEventListener('click', finalizarClase);
-
-      // Marcar Todos Presentes
-      document.getElementById('btn-marcar-todos-presentes').addEventListener('click', marcarTodosPresentes);
+      // Finalizar Asistencia y Noticia
+      document.getElementById('btn-finalizar-asistencia').addEventListener('click', () => finalizarClase('asistencia'));
+      document.getElementById('btn-finalizar-noticia').addEventListener('click', () => finalizarClase('noticia'));
 
       // Modales
-      document.getElementById('btn-ver-qrs').addEventListener('click', abrirModalQRs);
+      document.getElementById('btn-ver-qrs').addEventListener('click', () => abrirModalQRs('both'));
       document.getElementById('btn-cerrar-modal-qrs').addEventListener('click', () => document.getElementById('modal-qrs').classList.add('hidden'));
+      document.getElementById('btn-qr-filter-both').addEventListener('click', () => abrirModalQRs('both'));
+      document.getElementById('btn-qr-filter-asistencia').addEventListener('click', () => abrirModalQRs('asistencia'));
+      document.getElementById('btn-qr-filter-noticia').addEventListener('click', () => abrirModalQRs('noticia'));
 
       document.getElementById('btn-abrir-modal-noticia').addEventListener('click', () => document.getElementById('modal-noticia').classList.remove('hidden'));
       document.getElementById('btn-cerrar-modal-noticia').addEventListener('click', () => document.getElementById('modal-noticia').classList.add('hidden'));
@@ -850,71 +930,6 @@
           renderStudentTable(btn.dataset.filter);
         });
       });
-    }
-
-    async function setAppMode(mode) {
-      APP_STATE.mode = mode;
-      document.querySelectorAll('.mode-btn').forEach(btn => {
-        if (btn.dataset.mode === mode) {
-          btn.className = 'mode-btn active-mode flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl border-2 font-bold text-sm bg-brand-500 text-white border-brand-500 shadow-sm transition-all duration-150';
-        } else {
-          btn.className = 'mode-btn inactive-mode flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl border-2 font-bold text-sm bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 transition-all duration-150';
-        }
-      });
-
-      // Adaptar etiquetas y textos de la interfaz según el modo
-      const isNoticia = mode === 'noticia';
-      
-      const elTitle = document.getElementById('table-sheet-title');
-      if (elTitle) elTitle.textContent = isNoticia ? 'Hoja Noticia (Entregas)' : 'Hoja 2 Asistencia';
-
-      const elSubtitle = document.getElementById('table-sheet-subtitle');
-      if (elSubtitle) {
-        elSubtitle.textContent = isNoticia 
-          ? 'Registro de alumnos que entregaron (1) y quién no entregó (0) la noticia.' 
-          : 'Haz clic en 1 o 0 para modificar manualmente, o escanea el QR con la cámara.';
-      }
-
-      const elLabelPres = document.getElementById('stat-label-presentes');
-      if (elLabelPres) elLabelPres.textContent = isNoticia ? 'Entregó (1)' : 'Presentes (1)';
-
-      const elSubPres = document.getElementById('stat-sublabel-presentes');
-      if (elSubPres) elSubPres.textContent = isNoticia ? 'Noticia entregada' : 'Registrados hoy';
-
-      const elLabelAus = document.getElementById('stat-label-ausentes');
-      if (elLabelAus) elLabelAus.textContent = isNoticia ? 'No Entregó (0)' : 'Ausentes (0)';
-
-      const elSubAus = document.getElementById('stat-sublabel-ausentes');
-      if (elSubAus) elSubAus.textContent = isNoticia ? 'Sin entrega' : 'Faltas';
-
-      const elBtnFin = document.getElementById('btn-finalizar-texto');
-      if (elBtnFin) {
-        elBtnFin.textContent = isNoticia 
-          ? 'Finalizar Registro (Rellenar No Entregó con 0)' 
-          : 'Finalizar Clase (Rellenar Ausencias con 0)';
-      }
-
-      const elBtnTodos = document.getElementById('btn-todos-texto');
-      if (elBtnTodos) {
-        elBtnTodos.textContent = isNoticia ? 'Todos Entregaron' : 'Todos Presentes';
-      }
-
-      const elThEstado = document.getElementById('th-estado-col');
-      if (elThEstado) {
-        elThEstado.textContent = isNoticia ? 'Estado de Entrega' : 'Estado en Fecha';
-      }
-
-      const elFilterPres = document.getElementById('filter-btn-present');
-      if (elFilterPres) {
-        elFilterPres.textContent = isNoticia ? 'Entregaron' : 'Presentes';
-      }
-
-      const elFilterAus = document.getElementById('filter-btn-absent');
-      if (elFilterAus) {
-        elFilterAus.textContent = isNoticia ? 'No Entregó' : 'Ausentes';
-      }
-
-      await cargarDatosMateria();
     }
 
     async function setAppSubject(subjKey) {
@@ -935,14 +950,13 @@
     function renderStudentTable(filter = 'all') {
       const tbody = document.getElementById('student-table-body');
       const query = document.getElementById('search-student').value.toLowerCase().trim();
-      const isNoticia = APP_STATE.mode === 'noticia';
 
       const filtered = APP_STATE.students.filter(s => {
         const matches = s.nombre.toLowerCase().includes(query) || s.cuenta.toLowerCase().includes(query);
         if (!matches) return false;
-        if (filter === 'present') return s.status === 'present';
-        if (filter === 'absent') return s.status === 'absent';
-        if (filter === 'pending') return s.status === 'pending';
+        if (filter === 'asist_present') return s.status_asistencia === 'present';
+        if (filter === 'notic_present') return s.status_noticia === 'present';
+        if (filter === 'pending') return (s.status_asistencia === 'pending' || s.status_noticia === 'pending');
         return true;
       });
 
@@ -959,41 +973,51 @@
       }
 
       tbody.innerHTML = filtered.map((st, i) => {
-        let badgeHtml = '';
-        let rowClass = '';
-
-        if (st.status === 'present') {
-          const txt = isNoticia ? 'Entregó (1)' : 'Presente (1)';
-          badgeHtml = `<span class="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[11px] inline-flex items-center gap-1"><i class="fa-solid fa-circle-check text-emerald-600"></i> ${txt}</span>`;
-          rowClass = 'bg-emerald-50/30';
-        } else if (st.status === 'absent') {
-          const txt = isNoticia ? 'No Entregó (0)' : 'Ausente (0)';
-          badgeHtml = `<span class="px-2.5 py-1 rounded-full bg-rose-100 text-rose-800 font-bold text-[11px] inline-flex items-center gap-1"><i class="fa-solid fa-circle-xmark text-rose-600"></i> ${txt}</span>`;
-          rowClass = 'bg-rose-50/30';
+        let badgeAsist = '';
+        if (st.status_asistencia === 'present') {
+          badgeAsist = `<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] inline-flex items-center gap-1"><i class="fa-solid fa-check text-emerald-600"></i> Presente (1)</span>`;
+        } else if (st.status_asistencia === 'absent') {
+          badgeAsist = `<span class="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 font-bold text-[10px] inline-flex items-center gap-1"><i class="fa-solid fa-xmark text-rose-600"></i> Falta (0)</span>`;
         } else {
-          badgeHtml = `<span class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 font-semibold text-[11px] inline-flex items-center gap-1"><i class="fa-regular fa-clock text-slate-400"></i> Pendiente</span>`;
+          badgeAsist = `<span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-400 font-medium text-[10px]">Pendiente</span>`;
         }
 
-        const titleBtn1 = isNoticia ? 'Marcar Entregó (1)' : 'Marcar Presente (1)';
-        const titleBtn0 = isNoticia ? 'Marcar No Entregó (0)' : 'Marcar Ausente (0)';
+        let badgeNotic = '';
+        if (st.status_noticia === 'present') {
+          badgeNotic = `<span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold text-[10px] inline-flex items-center gap-1"><i class="fa-solid fa-check text-amber-600"></i> Entregó (1)</span>`;
+        } else if (st.status_noticia === 'absent') {
+          badgeNotic = `<span class="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 font-bold text-[10px] inline-flex items-center gap-1"><i class="fa-solid fa-xmark text-rose-600"></i> No entregó (0)</span>`;
+        } else {
+          badgeNotic = `<span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-400 font-medium text-[10px]">Pendiente</span>`;
+        }
 
         return `
-          <tr class="hover:bg-slate-50 transition border-b border-slate-100 ${rowClass}">
-            <td class="py-3 px-4 text-center font-mono text-slate-400">${i + 1}</td>
-            <td class="py-3 px-4 font-mono font-bold text-slate-700">${st.cuenta || '-'}</td>
+          <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+            <td class="py-3 px-3 text-center font-mono text-slate-400">${i + 1}</td>
+            <td class="py-3 px-3 font-mono font-bold text-slate-700">${st.cuenta || '-'}</td>
             <td class="py-3 px-4 font-medium text-slate-800">${st.nombre}</td>
-            <td class="py-3 px-4 text-center">${badgeHtml}</td>
-            <td class="py-3 px-4 text-center">
-              <div class="inline-flex items-center gap-1">
-                <button onclick="marcarAsistencia('${st.cuenta}', 1)" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] transition shadow-xs flex items-center gap-1" title="${titleBtn1}">
-                  <i class="fa-solid fa-check"></i> 1
-                </button>
-                <button onclick="marcarAsistencia('${st.cuenta}', 0)" class="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-[11px] transition shadow-xs flex items-center gap-1" title="${titleBtn0}">
-                  <i class="fa-solid fa-xmark"></i> 0
-                </button>
-                <button onclick="marcarAsistencia('${st.cuenta}', null)" class="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-[11px] transition" title="Limpiar">
-                  <i class="fa-solid fa-rotate-left"></i>
-                </button>
+            
+            <!-- Columna Asistencia -->
+            <td class="py-2.5 px-3 text-center border-x border-slate-100 bg-emerald-50/20">
+              <div class="inline-flex items-center justify-center gap-2">
+                ${badgeAsist}
+                <div class="inline-flex items-center gap-0.5">
+                  <button onclick="marcarAsistenciaIndividual('${st.cuenta}', 'asistencia', 1)" class="w-5 h-5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] flex items-center justify-center transition" title="Asistencia: Presente (1)">1</button>
+                  <button onclick="marcarAsistenciaIndividual('${st.cuenta}', 'asistencia', 0)" class="w-5 h-5 rounded bg-rose-600 hover:bg-rose-500 text-white font-bold text-[10px] flex items-center justify-center transition" title="Asistencia: Falta (0)">0</button>
+                  <button onclick="marcarAsistenciaIndividual('${st.cuenta}', 'asistencia', null)" class="w-5 h-5 rounded bg-slate-100 hover:bg-slate-200 text-slate-500 text-[10px] flex items-center justify-center transition" title="Limpiar"><i class="fa-solid fa-rotate-left text-[8px]"></i></button>
+                </div>
+              </div>
+            </td>
+
+            <!-- Columna Noticia -->
+            <td class="py-2.5 px-3 text-center bg-amber-50/20">
+              <div class="inline-flex items-center justify-center gap-2">
+                ${badgeNotic}
+                <div class="inline-flex items-center gap-0.5">
+                  <button onclick="marcarAsistenciaIndividual('${st.cuenta}', 'noticia', 1)" class="w-5 h-5 rounded bg-amber-600 hover:bg-amber-500 text-white font-bold text-[10px] flex items-center justify-center transition" title="Noticia: Entregó (1)">1</button>
+                  <button onclick="marcarAsistenciaIndividual('${st.cuenta}', 'noticia', 0)" class="w-5 h-5 rounded bg-rose-600 hover:bg-rose-500 text-white font-bold text-[10px] flex items-center justify-center transition" title="Noticia: No entregó (0)">0</button>
+                  <button onclick="marcarAsistenciaIndividual('${st.cuenta}', 'noticia', null)" class="w-5 h-5 rounded bg-slate-100 hover:bg-slate-200 text-slate-500 text-[10px] flex items-center justify-center transition" title="Limpiar"><i class="fa-solid fa-rotate-left text-[8px]"></i></button>
+                </div>
               </div>
             </td>
           </tr>
@@ -1003,26 +1027,38 @@
       actualizarEstadisticas();
     }
 
-    function actualizarEstadisticas(tot, pres, aus, pend) {
+    function actualizarEstadisticas(tot, asist, notic, pend) {
       const total = tot !== undefined ? tot : APP_STATE.students.length;
-      const presentes = pres !== undefined ? pres : APP_STATE.students.filter(s => s.status === 'present').length;
-      const ausentes = aus !== undefined ? aus : APP_STATE.students.filter(s => s.status === 'absent').length;
-      const pendientes = pend !== undefined ? pend : APP_STATE.students.filter(s => s.status === 'pending').length;
+      const asistencias = asist !== undefined ? asist : APP_STATE.students.filter(s => s.status_asistencia === 'present').length;
+      const noticias = notic !== undefined ? notic : APP_STATE.students.filter(s => s.status_noticia === 'present').length;
+      const pendientes = pend !== undefined ? pend : APP_STATE.students.filter(s => s.status_asistencia === 'pending' || s.status_noticia === 'pending').length;
 
-      document.getElementById('stat-total').textContent = total;
-      document.getElementById('stat-presentes').textContent = presentes;
-      document.getElementById('stat-ausentes').textContent = ausentes;
-      document.getElementById('stat-pendientes').textContent = pendientes;
+      const elTotal = document.getElementById('stat-total');
+      const elAsist = document.getElementById('stat-asistencias');
+      const elNotic = document.getElementById('stat-noticias');
+      const elPend = document.getElementById('stat-pendientes');
+
+      if (elTotal) elTotal.textContent = total;
+      if (elAsist) elAsist.textContent = asistencias;
+      if (elNotic) elNotic.textContent = noticias;
+      if (elPend) elPend.textContent = pendientes;
     }
 
     /* -------------------------------------------------------------
-       7. OPERACIONES DE ASISTENCIA (COMUNICACIÓN CON PYTHON)
+       7. OPERACIONES MANUALES Y FINALIZACIÓN
        ------------------------------------------------------------- */
-    window.marcarAsistencia = async function(cuenta, valor) {
+    window.marcarAsistenciaIndividual = async function(cuenta, tipo, valor) {
       const st = APP_STATE.students.find(s => s.cuenta === cuenta);
       if (st) {
-        st.status = valor === 1 ? 'present' : (valor === 0 ? 'absent' : 'pending');
-        actualizarCeldaWorkbookFallback(cuenta, valor);
+        const newStatus = valor === 1 ? 'present' : (valor === 0 ? 'absent' : 'pending');
+        if (tipo === 'noticia') {
+          st.status_noticia = newStatus;
+          st.val_noticia = valor;
+        } else {
+          st.status_asistencia = newStatus;
+          st.val_asistencia = valor;
+        }
+        actualizarCeldaWorkbookFallback(cuenta, valor, tipo);
         renderStudentTable();
       }
 
@@ -1036,29 +1072,34 @@
               cuenta: cuenta,
               fecha: APP_STATE.todayDateStr,
               valor: valor,
-              modo: APP_STATE.mode
+              modo: tipo
             })
           });
           const data = await resp.json();
           if (!data.ok) alert(data.error || 'Error al guardar en Excel.');
+          else actualizarEstadisticas();
         } catch (e) {
           console.error('Error al guardar en Python:', e);
         }
       }
     };
 
-    function actualizarCeldaWorkbookFallback(cuenta, valor) {
+    function actualizarCeldaWorkbookFallback(cuenta, valor, modo = 'asistencia') {
       if (!APP_STATE.workbook) return;
-      const sheetName = APP_STATE.mode === 'noticia' ? 'Noticia' : 'Hoja2';
+      const sheetName = modo === 'noticia' ? 'Noticia' : 'Hoja2';
       const ws = APP_STATE.workbook.Sheets[sheetName];
       if (!ws) return;
 
       const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
-      if (!data || data.length < 2) return;
+      if (!data || data.length < 1) return;
 
-      const headers = data[0].map(h => String(h || '').trim());
-      const colIdx = headers.indexOf(APP_STATE.todayDateStr);
-      if (colIdx === -1) return;
+      let headers = (data[0] || []).map(h => String(h || '').trim());
+      let colIdx = headers.indexOf(APP_STATE.todayDateStr);
+      if (colIdx === -1) {
+        colIdx = headers.length;
+        const hRef = XLSX.utils.encode_cell({ r: 0, c: colIdx });
+        ws[hRef] = { t: 's', v: APP_STATE.todayDateStr };
+      }
 
       for (let r = 1; r < data.length; r++) {
         const row = data[r];
@@ -1076,15 +1117,13 @@
       }
     }
 
-    async function finalizarClase() {
-      const hojaTxt = APP_STATE.mode === 'noticia' ? 'Noticia' : 'Hoja 2 (Asistencia)';
-      const msgConfirm = APP_STATE.mode === 'noticia'
-        ? `¿Finalizar registro en Noticia de ${SUBJECT_CONFIG[APP_STATE.subject].name} para la fecha ${APP_STATE.todayDateStr}?\n\nTodos los alumnos sin calificar serán marcados como NO ENTREGÓ (0).`
-        : `¿Finalizar registro en Hoja 2 de ${SUBJECT_CONFIG[APP_STATE.subject].name} para la fecha ${APP_STATE.todayDateStr}?\n\nTodos los alumnos pendientes serán registrados como AUSENTES (0).`;
+    async function finalizarClase(modo = 'asistencia') {
+      const nombreModo = modo === 'noticia' ? 'Noticia' : 'Asistencia (Hoja 2)';
+      const msgConfirm = modo === 'noticia'
+        ? `¿Finalizar registro de Noticias para ${SUBJECT_CONFIG[APP_STATE.subject].name} en fecha ${APP_STATE.todayDateStr}?\n\nLos alumnos pendientes se marcarán como NO ENTREGÓ (0).`
+        : `¿Finalizar registro de Asistencias para ${SUBJECT_CONFIG[APP_STATE.subject].name} en fecha ${APP_STATE.todayDateStr}?\n\nLos alumnos pendientes se marcarán como AUSENTES (0).`;
 
-      if (!confirm(msgConfirm)) {
-        return;
-      }
+      if (!confirm(msgConfirm)) return;
 
       if (APP_STATE.serverConnected) {
         try {
@@ -1094,7 +1133,7 @@
             body: JSON.stringify({
               materia: APP_STATE.subject,
               fecha: APP_STATE.todayDateStr,
-              modo: APP_STATE.mode
+              modo: modo
             })
           });
           const data = await resp.json();
@@ -1103,41 +1142,32 @@
             await cargarDatosMateria();
             return;
           } else {
-            alert(data.error || 'Error al finalizar clase.');
+            alert(data.error || 'Error al finalizar.');
           }
         } catch (e) {
-          console.error('Error en finalizar clase:', e);
+          console.error('Error en finalizar:', e);
         }
       }
 
-      // Fallback local (para Netlify o sin Python)
+      // Fallback local
       APP_STATE.students.forEach(s => {
-        if (s.status === 'pending') {
-          s.status = 'absent';
-          actualizarCeldaWorkbookFallback(s.cuenta, 0);
+        if (modo === 'noticia') {
+          if (!s.status_noticia || s.status_noticia === 'pending') {
+            s.status_noticia = 'absent';
+            s.val_noticia = 0;
+            actualizarCeldaWorkbookFallback(s.cuenta, 0, 'noticia');
+          }
+        } else {
+          if (!s.status_asistencia || s.status_asistencia === 'pending') {
+            s.status_asistencia = 'absent';
+            s.val_asistencia = 0;
+            actualizarCeldaWorkbookFallback(s.cuenta, 0, 'asistencia');
+          }
         }
       });
       renderStudentTable();
-      alert(`✅ Registro finalizado localmente. Todas las casillas sin marcar se registraron con 0.`);
-    }
-
-    async function marcarTodosPresentes() {
-      const isNoticia = APP_STATE.mode === 'noticia';
-      const promptTxt = isNoticia ? '¿Marcar a TODOS los alumnos con Noticia Entregada (1)?' : '¿Marcar a TODOS los alumnos como Presentes (1)?';
-      if (!confirm(promptTxt)) return;
-
-      for (const st of APP_STATE.students) {
-        st.status = 'present';
-        actualizarCeldaWorkbookFallback(st.cuenta, 1);
-        if (APP_STATE.serverConnected) {
-          fetch('/api/marcar', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ materia: APP_STATE.subject, cuenta: st.cuenta, fecha: APP_STATE.todayDateStr, valor: 1, modo: APP_STATE.mode })
-          });
-        }
-      }
-      renderStudentTable();
+      actualizarEstadisticas();
+      alert(`✅ Registro finalizado localmente.`);
     }
 
     /* -------------------------------------------------------------
@@ -1226,6 +1256,27 @@
 
       const feedback = document.getElementById('scan-feedback');
 
+      // Analizar si el QR especifica explícitamente el tipo (ASISTENCIA o NOTICIA)
+      const partes = qrText.split('|').map(p => p.trim());
+      let tipoDeclarado = null;
+      let cuentaBuscada = '';
+      let nombreBuscado = '';
+
+      if (partes.length > 0 && ['ASISTENCIA', 'NOTICIA'].includes(partes[0].toUpperCase())) {
+        tipoDeclarado = partes[0].toLowerCase();
+        cuentaBuscada = partes[1] || '';
+        nombreBuscado = partes[2] || '';
+      } else if (partes.length > 2 && ['ASISTENCIA', 'NOTICIA'].includes(partes[2].toUpperCase())) {
+        tipoDeclarado = partes[2].toLowerCase();
+        cuentaBuscada = partes[0] || '';
+        nombreBuscado = partes[1] || '';
+      } else {
+        cuentaBuscada = partes[0] || '';
+        nombreBuscado = partes[1] || '';
+      }
+
+      const modoObjetivo = tipoDeclarado || 'asistencia';
+
       if (APP_STATE.serverConnected) {
         try {
           const resp = await fetch('/api/scan', {
@@ -1235,18 +1286,29 @@
               materia: APP_STATE.subject,
               qr_data: qrText,
               fecha: APP_STATE.todayDateStr,
-              modo: APP_STATE.mode
+              modo: modoObjetivo
             })
           });
           const data = await resp.json();
           if (data.ok) {
             playBeep(true);
+            const modoRegistrado = (data.modo || modoObjetivo).toLowerCase();
+            const modoLabel = modoRegistrado === 'noticia' ? 'NOTICIA' : 'ASISTENCIA';
             feedback.className = 'mt-3 p-3 rounded-xl bg-emerald-100 border border-emerald-300 text-xs text-center text-emerald-800 font-bold flex items-center justify-center gap-2';
-            feedback.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600 text-base"></i> ✅ ¡${data.alumno.nombre} registrado con éxito (1)!`;
+            feedback.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600 text-base"></i> ✅ ¡${data.alumno.nombre} registrado con éxito en ${modoLabel} (1)!`;
 
             const st = APP_STATE.students.find(s => s.cuenta === data.alumno.cuenta);
-            if (st) st.status = 'present';
-            renderStudentTable();
+            if (st) {
+              if (modoRegistrado === 'noticia') {
+                st.status_noticia = 'present';
+                st.val_noticia = 1;
+              } else {
+                st.status_asistencia = 'present';
+                st.val_asistencia = 1;
+              }
+              renderStudentTable();
+              actualizarEstadisticas();
+            }
             return;
           } else {
             playBeep(false);
@@ -1259,22 +1321,31 @@
         }
       }
 
-      // Fallback si no hay backend (ej. Netlify)
-      const parts = qrText.split('|');
-      const cuenta = parts[0].trim();
-      const st = APP_STATE.students.find(s => s.cuenta === cuenta || s.nombre.toLowerCase().includes(qrText.toLowerCase()));
+      // Fallback si no hay backend (ej. Netlify o navegador directo)
+      const st = APP_STATE.students.find(s => 
+        (cuentaBuscada && s.cuenta === cuentaBuscada) ||
+        (nombreBuscado && s.nombre.toLowerCase().includes(nombreBuscado.toLowerCase())) ||
+        s.nombre.toLowerCase().includes(qrText.toLowerCase())
+      );
+
       if (st) {
-        st.status = 'present';
-        actualizarCeldaWorkbookFallback(st.cuenta, 1);
+        if (modoObjetivo === 'noticia') {
+          st.status_noticia = 'present';
+          st.val_noticia = 1;
+        } else {
+          st.status_asistencia = 'present';
+          st.val_asistencia = 1;
+        }
         renderStudentTable();
+        actualizarEstadisticas();
         playBeep(true);
-        const msg = APP_STATE.mode === 'noticia' ? `¡Noticia de ${st.nombre} registrada (1)!` : `¡${st.nombre} registrado (1)!`;
+        const tipoLabel = modoObjetivo === 'noticia' ? 'NOTICIA' : 'ASISTENCIA';
         feedback.className = 'mt-3 p-3 rounded-xl bg-emerald-100 border border-emerald-300 text-xs text-center text-emerald-800 font-bold flex items-center justify-center gap-2';
-        feedback.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600 text-base"></i> ✅ ${msg}`;
+        feedback.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600 text-base"></i> ✅ ¡${tipoLabel} de ${st.nombre} registrada (1)!`;
       } else {
         playBeep(false);
         feedback.className = 'mt-3 p-3 rounded-xl bg-rose-100 border border-rose-300 text-xs text-center text-rose-800 font-bold flex items-center justify-center gap-2';
-        feedback.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-rose-600 text-base"></i> QR no reconocido (${qrText.substring(0, 20)})`;
+        feedback.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-rose-600 text-base"></i> QR no reconocido (${qrText.substring(0, 30)})`;
       }
     }
 
@@ -1397,40 +1468,130 @@
     /* -------------------------------------------------------------
        10. VISUALIZADOR DE QRS PARA IMPRIMIR
        ------------------------------------------------------------- */
-    function abrirModalQRs() {
+    let currentQrFilter = 'both'; // 'both', 'asistencia', 'noticia'
+
+    function abrirModalQRs(filtro = 'both') {
+      currentQrFilter = filtro;
+      actualizarBotonesFiltroQR();
+
       const container = document.getElementById('qr-print-container');
       container.innerHTML = '';
 
       if (APP_STATE.students.length === 0) {
         container.innerHTML = '<p class="text-center text-slate-400 col-span-full py-8">No hay alumnos en la lista actual.</p>';
-      } else {
-        APP_STATE.students.forEach((st, idx) => {
-          const card = document.createElement('div');
-          card.className = 'bg-white rounded-xl p-4 border border-slate-200 shadow-sm flex flex-col items-center text-center';
-          const qrId = `qr-canvas-${idx}`;
+        const countLbl = document.getElementById('qr-count-label');
+        if (countLbl) countLbl.textContent = '0 códigos QR';
+        document.getElementById('modal-qrs').classList.remove('hidden');
+        return;
+      }
 
-          card.innerHTML = `
-            <div class="text-[11px] font-bold text-brand-700 uppercase tracking-wider mb-1">${SUBJECT_CONFIG[APP_STATE.subject].name}</div>
-            <div id="${qrId}" class="p-2 bg-white rounded-lg border border-slate-200 my-1"></div>
-            <div class="font-bold text-xs text-slate-800 mt-1">${st.nombre}</div>
-            <div class="text-[11px] text-slate-500 font-mono">Cuenta: ${st.cuenta}</div>
+      const materiaNombre = SUBJECT_CONFIG[APP_STATE.subject]?.name || 'Materia';
+      let totalQRsGenerados = 0;
+
+      APP_STATE.students.forEach((st, idx) => {
+        // 1. QR DE ASISTENCIA
+        if (currentQrFilter === 'both' || currentQrFilter === 'asistencia') {
+          totalQRsGenerados++;
+          const cardAsist = document.createElement('div');
+          cardAsist.className = 'bg-white rounded-xl p-4 border-2 border-emerald-300 shadow-sm flex flex-col items-center text-center relative overflow-hidden transition hover:shadow-md';
+          const qrIdAsist = `qr-canvas-asist-${idx}`;
+
+          cardAsist.innerHTML = `
+            <div class="w-full flex items-center justify-between gap-1 mb-2">
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-600 text-white uppercase tracking-wider inline-flex items-center gap-1 shadow-xs">
+                <i class="fa-solid fa-calendar-check"></i> ASISTENCIA
+              </span>
+              <span class="text-[10px] text-slate-400 font-semibold truncate">${materiaNombre}</span>
+            </div>
+            <div id="${qrIdAsist}" class="p-2.5 bg-white rounded-xl border border-emerald-200 my-1 shadow-inner"></div>
+            <div class="font-extrabold text-xs text-slate-900 mt-2 px-1 text-center line-clamp-2">${st.nombre}</div>
+            <div class="text-[11px] text-slate-600 font-mono font-bold mt-0.5">Cuenta: ${st.cuenta || '-'}</div>
+            <div class="mt-2 pt-1.5 border-t border-emerald-100 w-full text-[10px] font-bold text-emerald-700 bg-emerald-50/80 rounded py-0.5">
+              CÓDIGO EXCLUSIVO: ASISTENCIA
+            </div>
           `;
-          container.appendChild(card);
+          container.appendChild(cardAsist);
 
           setTimeout(() => {
-            new QRCode(document.getElementById(qrId), {
-              text: `${st.cuenta}|${st.nombre}`,
-              width: 128,
-              height: 128,
-              colorDark: "#000000",
-              colorLight: "#ffffff",
-              correctLevel: QRCode.CorrectLevel.M
-            });
+            const el = document.getElementById(qrIdAsist);
+            if (el) {
+              new QRCode(el, {
+                text: `ASISTENCIA|${st.cuenta}|${st.nombre}`,
+                width: 128,
+                height: 128,
+                colorDark: "#065f46",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.M
+              });
+            }
           }, 10);
-        });
+        }
+
+        // 2. QR DE NOTICIA
+        if (currentQrFilter === 'both' || currentQrFilter === 'noticia') {
+          totalQRsGenerados++;
+          const cardNotic = document.createElement('div');
+          cardNotic.className = 'bg-white rounded-xl p-4 border-2 border-amber-300 shadow-sm flex flex-col items-center text-center relative overflow-hidden transition hover:shadow-md';
+          const qrIdNotic = `qr-canvas-notic-${idx}`;
+
+          cardNotic.innerHTML = `
+            <div class="w-full flex items-center justify-between gap-1 mb-2">
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-white uppercase tracking-wider inline-flex items-center gap-1 shadow-xs">
+                <i class="fa-solid fa-newspaper"></i> NOTICIA
+              </span>
+              <span class="text-[10px] text-slate-400 font-semibold truncate">${materiaNombre}</span>
+            </div>
+            <div id="${qrIdNotic}" class="p-2.5 bg-white rounded-xl border border-amber-200 my-1 shadow-inner"></div>
+            <div class="font-extrabold text-xs text-slate-900 mt-2 px-1 text-center line-clamp-2">${st.nombre}</div>
+            <div class="text-[11px] text-slate-600 font-mono font-bold mt-0.5">Cuenta: ${st.cuenta || '-'}</div>
+            <div class="mt-2 pt-1.5 border-t border-amber-100 w-full text-[10px] font-bold text-amber-800 bg-amber-50/80 rounded py-0.5">
+              CÓDIGO EXCLUSIVO: NOTICIA
+            </div>
+          `;
+          container.appendChild(cardNotic);
+
+          setTimeout(() => {
+            const el = document.getElementById(qrIdNotic);
+            if (el) {
+              new QRCode(el, {
+                text: `NOTICIA|${st.cuenta}|${st.nombre}`,
+                width: 128,
+                height: 128,
+                colorDark: "#92400e",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.M
+              });
+            }
+          }, 10);
+        }
+      });
+
+      const countLbl = document.getElementById('qr-count-label');
+      if (countLbl) {
+        countLbl.textContent = `${totalQRsGenerados} QRs generados (${APP_STATE.students.length} alumnos)`;
       }
 
       document.getElementById('modal-qrs').classList.remove('hidden');
+    }
+
+    function actualizarBotonesFiltroQR() {
+      const btnBoth = document.getElementById('btn-qr-filter-both');
+      const btnAsist = document.getElementById('btn-qr-filter-asistencia');
+      const btnNotic = document.getElementById('btn-qr-filter-noticia');
+
+      if (!btnBoth || !btnAsist || !btnNotic) return;
+
+      [btnBoth, btnAsist, btnNotic].forEach(b => {
+        b.className = 'px-3 py-1 rounded-lg text-xs font-semibold bg-white text-slate-700 hover:bg-slate-200 border border-slate-300 transition';
+      });
+
+      if (currentQrFilter === 'both') {
+        btnBoth.className = 'px-3 py-1 rounded-lg text-xs font-bold bg-brand-500 text-white shadow-xs transition';
+      } else if (currentQrFilter === 'asistencia') {
+        btnAsist.className = 'px-3 py-1 rounded-lg text-xs font-bold bg-emerald-600 text-white shadow-xs transition';
+      } else if (currentQrFilter === 'noticia') {
+        btnNotic.className = 'px-3 py-1 rounded-lg text-xs font-bold bg-amber-500 text-white shadow-xs transition';
+      }
     }
   </script>
 </body>
